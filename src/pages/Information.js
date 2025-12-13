@@ -79,7 +79,7 @@ const Information = () => {
       },
       "pmw-200": {
         title: "Sony PMW-200 Camera",
-        image: "/assets/items/pmw.png",
+        image: "/assets/items/PMW.png",
         description: "The Sony PMW-200 is a professional handheld flash memory camcorder that delivers exceptional image quality and versatility. Featuring three 1/3-type Exmor CMOS sensors and 10-bit 4:2:2 HD recording, this camera produces broadcast-quality footage with excellent low-light performance. With its compact design and comprehensive professional features, the PMW-200 is ideal for news gathering, documentary production, and event coverage."
       },
       "sony-pmw-350k": {
