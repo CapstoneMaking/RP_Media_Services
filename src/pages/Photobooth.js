@@ -35,7 +35,7 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
     { name: "Birthday", src: "/frames/birthdayyy.png" },
     { name: "Christmas", src: "/frames/christmasss.png" },
     { name: "Flowers", src: "/frames/flowersss.png" },
-    { name: "Instagram", src: "/frames/Instagrammm.png" },
+    { name: "Instagram", src: "/frames/instagrammm.png" },
     { name: "Spotify", src: "/frames/spotifyyy.png" },
     { name: "Wanted", src: "/frames/wanteddd.png" }
   ];
