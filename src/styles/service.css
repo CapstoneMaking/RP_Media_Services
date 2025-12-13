@@ -1,0 +1,231 @@
+/*service*/
+.Service-head {
+  background-image: url('/public/assets/bgHomepage3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  font-size: clamp(28px, 5vw, 58px); /* Responsive font size */
+  font-weight: 900;
+  margin-bottom: 30px;
+  text-align: center;
+  padding: clamp(30px, 5vw, 58px); /* Responsive padding */
+  width: 100vw !important;
+  color: rgb(255, 255, 255);
+  min-height: 200px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-left: -20px;
+}
+
+.Service-head p {
+  font-size: clamp(40px, 2.5vw, 24px);
+  font-weight: 400;
+  margin-top: 15px;
+  opacity: 0.9;
+}
+
+.service {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.service .heading {
+  color: rgb(255, 255, 255);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.service-container {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  gap: 25px;
+  padding: 0 15px;
+  box-sizing: border-box;
+  margin-bottom: 50px;
+}
+
+.service-content {
+  background-color: #f8f9fa;
+  padding: clamp(25px, 4vw, 35px) clamp(20px, 3vw, 25px);
+  border-radius: 15px;
+  line-height: 1.6;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eaeaea;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.service-content:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+.service-content svg {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
+}
+
+.service-content:hover svg {
+  transform: scale(1.1);
+}
+
+.service-content h2 {
+  margin-top: 8px;
+  color: #333;
+  font-size: clamp(20px, 2.5vw, 24px);
+  margin-bottom: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.service-content p {
+  color: #555;
+  font-size: clamp(14px, 1.8vw, 16px);
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Footer adjustments for mobile */
+.footer {
+  width: 100%;
+}
+
+.copyright {
+  padding: 20px 15px;
+  font-size: clamp(12px, 2vw, 14px);
+}
+
+/* Responsive adjustments for tablets */
+@media (max-width: 768px) {
+  .Service-head {
+    padding: 40px 20px;
+    min-height: 180px;
+  }
+  
+  .service-container {
+    gap: 20px;
+    padding: 0 10px;
+  }
+  
+  .service-content {
+    padding: 25px 20px;
+  }
+}
+
+/* Responsive adjustments for mobile phones */
+@media (max-width: 480px) {
+  .Service-head {
+    padding: 30px 15px;
+    min-height: 150px;
+    margin-bottom: 20px;
+  }
+  
+  .service-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 0;
+  }
+  
+  .service-content {
+    padding: 20px 15px;
+    border-radius: 12px;
+  }
+  
+  .service-content svg {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 15px;
+  }
+  
+  .service-content h2 {
+    margin-bottom: 12px;
+  }
+  
+  .service {
+    padding: 0 15px;
+  }
+}
+
+/* For very small screens */
+@media (max-width: 320px) {
+  .service {
+    padding: 0 10px;
+  }
+  
+  .service-content {
+    padding: 18px 12px;
+  }
+  
+  .service-content h2 {
+    font-size: 18px;
+  }
+  
+  .service-content p {
+    font-size: 13px;
+  }
+}
+
+/* For large screens */
+@media (min-width: 1200px) {
+  .service-container {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 1200px;
+    margin: 0 auto 60px;
+  }
+  
+  .service-content {
+    padding: 40px 30px;
+  }
+}
+
+/* For extra large screens */
+@media (min-width: 1400px) {
+  .service-container {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Prevent layout shifting on hover */
+.service-content {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Improve touch experience for mobile */
+@media (hover: none) {
+  .service-content:hover {
+    transform: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+  
+  .service-content:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Ensure images scale properly */
+.Service-head img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}

@@ -1,0 +1,1046 @@
+/* Login/Register Page - Isolated Styles */
+
+.login-page-wrapper {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.login-container {
+    background-color: #ffffff;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+    width: 768px;
+    max-width: 100%;
+    min-height: 480px;
+    margin: 0 auto;
+    margin-top: 50px;
+    padding: 0;
+}
+
+.login-container p {
+    font-size: 18px;
+    line-height: 20px;
+    letter-spacing: 0.3px;
+    margin: 20px 0;
+}
+
+.login-container span {
+    font-size: 14px;
+}
+
+.login-container a {
+    color: #333;
+    font-size: 13px;
+    text-decoration: none;
+    margin: 15px 0 10px;
+}
+
+.login-container button {
+    background-color: #000000;
+    color: #fff;
+    font-size: 12px;
+    padding: 10px 45px;
+    border: 1px solid black;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.login-container input {
+    background-color: #eee;
+    border: 1px solid black;
+    margin: 8px 0;
+    padding: 10px 15px;
+    font-size: 13px;
+    border-radius: 8px;
+    width: 100%;
+    outline: none;
+}
+
+.login-container form {
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    height: 100%;
+    margin: 0;
+}
+
+/* Login and register animation */
+.submit-register:hover {
+    background-color: #f7f7f7;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    color: black;
+}
+
+.submit-login:hover {
+    background-color: #f7f7f7;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    color: black;
+}
+
+.login-container button.hidden {
+    background-color: transparent;
+    border-color: #fff;
+}
+
+/* Activate/hide login and register */
+.login-form {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s ease-in-out;
+    left: 0;
+    width: 50%;
+    z-index: 2;
+    margin: 0;
+    padding: 0;
+}
+
+.login-container.active .login-form {
+    transform: translateX(100%);
+}
+
+.register-form {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s ease-in-out;
+    left: 0;
+    width: 50%;
+    opacity: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+}
+
+.login-container.active .register-form {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+    animation: move 0.6s;
+}
+
+@keyframes move {
+
+    0%,
+    100% {
+        opacity: 0;
+    }
+
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Toggle part */
+.toggle-container {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    transition: all 0.6s ease-in-out;
+    border-radius: 150px 0 0 100px;
+    z-index: 1000;
+    margin: 0;
+    padding: 0;
+}
+
+.login-container.active .toggle-container {
+    transform: translateX(-100%);
+    border-radius: 0 150px 100px 0;
+}
+
+.toggle {
+    background-color: #000000;
+    height: 100%;
+    background: linear-gradient(to right, #424242, #000000);
+    color: #ffffff;
+    position: relative;
+    left: -100%;
+    height: 100%;
+    width: 200%;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+    margin: 0;
+    padding: 0;
+}
+
+.login-container.active .toggle {
+    transform: translateX(50%);
+}
+
+.toggle-left {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 30px;
+    text-align: center;
+    top: 0;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+    transform: translateX(-200%);
+    margin: 0;
+}
+
+.login-container.active .toggle-left {
+    transform: translateX(0);
+}
+
+.toggle-right {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 30px;
+    text-align: center;
+    top: 0;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+    right: 0;
+    transform: translateX(0);
+    margin: 0;
+}
+
+.login-container.active .toggle-right {
+    transform: translateX(200%);
+}
+
+.toggle .toggle-left h1,
+.toggle .toggle-right h1 {
+    color: #ffffff;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* Messages */
+.registerMessage {
+    background-color: black;
+    color: white;
+    padding: 10px 5px;
+    margin: 10px;
+    border-radius: 5px;
+    font-size: 1rem;
+    opacity: 0;
+    animation: fadeOut 7s forwards;
+}
+
+.loginMessage {
+    background-color: black;
+    color: white;
+    padding: 10px 5px;
+    margin: 10px;
+    border-radius: 5px;
+    font-size: 1rem;
+    opacity: 0;
+    animation: fadeOut 7s forwards;
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+    }
+
+    70% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Logo */
+.login-logo {
+    position: absolute;
+    top: -25px;
+    left: 30px;
+    margin: 0;
+    padding: 0;
+}
+
+
+
+/* Ensure the login container stays centered */
+@media (max-width: 768px) {
+    .login-page-wrapper {
+        padding: 10px;
+    }
+
+    .login-container {
+        width: 95%;
+        min-height: 450px;
+    }
+}
+
+/* Add to src/styles/login.css */
+
+/* Password wrapper for eye icon inside input */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.password-input {
+    padding-right: 45px !important;
+    /* Space for eye icon */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    transition: color 0.3s;
+}
+
+.password-toggle:hover {
+    color: #333;
+}
+
+.password-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.password-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Style form inputs for consistency */
+.form-input {
+    background-color: #f2f2f2;
+    border: none;
+    padding: 15px;
+    margin: 8px 0;
+    width: 100%;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.form-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-input:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+/* Forgot password link styling */
+.forgot-password {
+    display: block;
+    margin: 10px 0 20px;
+    color: #666;
+    text-decoration: none;
+    font-size: 14px;
+    text-align: right;
+}
+
+.forgot-password:hover {
+    color: #333;
+    text-decoration: underline;
+}
+
+/* Adjust for mobile */
+@media (max-width: 768px) {
+    .password-wrapper {
+        margin-bottom: 15px;
+    }
+
+    .password-toggle {
+        right: 12px;
+        width: 22px;
+        height: 22px;
+    }
+
+    .password-toggle svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .form-input {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
+
+.verification-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.verification-modal-content {
+    background-color: white;
+    padding: 40px 30px;
+    border-radius: 15px;
+    max-width: 550px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.close-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.verification-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+}
+
+.verification-modal-content h3 {
+    color: #000;
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+
+.verification-text {
+    margin-bottom: 15px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.verification-instructions {
+    background-color: #fff3cd;
+    border: 2px solid #ffc107;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.verification-steps {
+    text-align: left;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.verification-steps h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.verification-steps ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.verification-steps li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.verification-warning {
+    background-color: #f8d7da;
+    border: 2px solid #f5c6cb;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-size: 16px;
+}
+
+.verification-ok-button {
+    background-color: #000;
+    color: white;
+    border: none;
+    padding: 12px 40px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    margin-top: 10px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.verification-ok-button:hover {
+    background-color: #333;
+}
+
+.verification-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.verification-resend-button {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.verification-resend-button:hover {
+    background-color: #5a6268;
+}
+
+.verification-resend-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.verification-notice {
+    background-color: #e7f3ff;
+    border: 1px solid #b3d7ff;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #004085;
+}
+
+.login-notice {
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin: 15px 0 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #666;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .verification-modal-content {
+        padding: 30px 20px;
+    }
+
+    .verification-actions {
+        flex-direction: column;
+    }
+
+    .verification-ok-button,
+    .verification-resend-button {
+        width: 100%;
+    }
+}
+/* Password Reset Specific Styles */
+.reset-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 80px);
+  padding: 40px 20px;
+}
+
+.reset-form {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 500px;
+  animation: slideUp 0.5s ease;
+  margin: auto;
+}
+
+.reset-form h1 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #1f1f1f;
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.reset-form p {
+  text-align: center;
+  color: #666;
+  margin-bottom: 30px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* Message styles */
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+  border-left: 4px solid #28a745;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+  border-left: 4px solid #dc3545;
+}
+
+/* Success step styling */
+.reset-form h3 {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #1f1f1f;
+  font-size: 24px;
+}
+
+/* Email highlight */
+.reset-form p strong {
+  color: #1f1f1f;
+  font-weight: 600;
+}
+
+/* Alternative button styling */
+.reset-form .submit-register[style*="background: transparent"] {
+  background: transparent !important;
+  color: #1f1f1f !important;
+  border: 2px solid #1f1f1f !important;
+  padding: 16px !important;
+}
+
+.reset-form .submit-register[style*="background: transparent"]:hover {
+  background: #1f1f1f !important;
+  color: white !important;
+}
+
+/* Back link styling */
+.reset-form a[href="/login-register"] {
+  color: #1f1f1f;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  display: inline-block;
+  padding: 5px 0;
+}
+
+.reset-form a[href="/login-register"]:hover {
+  color: #4a4a4a;
+  text-decoration: underline;
+}
+
+/* Emoji styling in success message */
+.reset-form div[style*="font-size: 48px"] {
+  margin-bottom: 20px;
+}
+
+/* Password requirements styling */
+.reset-form input[placeholder*="New Password"] {
+  margin-bottom: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .reset-form {
+    padding: 30px 20px;
+    margin: 20px;
+  }
+  
+  .reset-form h1 {
+    font-size: 28px;
+  }
+}
+/* Add to the end of the file */
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .login-container {
+    width: 95%;
+    min-height: 420px;
+    margin-top: 30px;
+  }
+  
+  .login-container h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  
+  .login-container p {
+    font-size: 16px;
+    margin: 15px 0;
+  }
+  
+  .login-container span {
+    font-size: 12px;
+  }
+  
+  .login-container button {
+    font-size: 11px;
+    padding: 8px 35px;
+  }
+  
+  .login-container input {
+    font-size: 12px;
+    padding: 8px 12px;
+    margin: 6px 0;
+  }
+  
+  .login-container form {
+    padding: 0 30px;
+  }
+  
+  .toggle .toggle-left h1,
+  .toggle .toggle-right h1 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .toggle-left p,
+  .toggle-right p {
+    font-size: 14px;
+    margin: 10px 0;
+  }
+  
+  .toggle-container {
+    border-radius: 100px 0 0 80px;
+  }
+  
+  .login-container.active .toggle-container {
+    border-radius: 0 100px 80px 0;
+  }
+  
+  .password-wrapper {
+    margin-bottom: 15px;
+  }
+  
+  .password-toggle {
+    right: 10px;
+    width: 20px;
+    height: 20px;
+  }
+  
+  .password-toggle svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .form-input {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page-wrapper {
+    padding: 10px;
+  }
+  
+  .login-container {
+    min-height: 400px;
+    margin-top: 20px;
+    border-radius: 20px;
+  }
+  
+  .login-container h1 {
+    font-size: 22px;
+  }
+  
+  .login-container p {
+    font-size: 14px;
+    line-height: 18px;
+  }
+  
+  .login-container span {
+    font-size: 11px;
+  }
+  
+  .login-container button {
+    font-size: 10px;
+    padding: 7px 30px;
+    margin-top: 5px;
+  }
+  
+  .login-container input {
+    font-size: 11px;
+    padding: 7px 10px;
+    margin: 5px 0;
+  }
+  
+  .login-container form {
+    padding: 0 20px;
+  }
+  
+  .toggle .toggle-left h1,
+  .toggle .toggle-right h1 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .toggle-left p,
+  .toggle-right p {
+    font-size: 13px;
+    margin: 8px 0;
+  }
+  
+  .toggle-left,
+  .toggle-right {
+    padding: 0 20px;
+  }
+  
+  .toggle-container button {
+    padding: 6px 25px;
+  }
+  
+  /* Verification modal mobile adjustments */
+  .verification-modal-content {
+    padding: 25px 15px;
+  }
+  
+  .verification-modal-content h3 {
+    font-size: 20px;
+  }
+  
+  .verification-text {
+    font-size: 14px;
+  }
+  
+  .verification-instructions {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .verification-steps {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .verification-steps ol {
+    padding-left: 15px;
+  }
+  
+  .verification-ok-button,
+  .verification-resend-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  /* Password reset form mobile */
+  .reset-form {
+    padding: 30px 15px;
+  }
+  
+  .reset-form h1 {
+    font-size: 26px;
+  }
+  
+  .reset-form p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-container {
+    min-height: 380px;
+  }
+  
+  .login-container h1 {
+    font-size: 20px;
+  }
+  
+  .login-container form {
+    padding: 0 15px;
+  }
+  
+  .toggle-left,
+  .toggle-right {
+    padding: 0 15px;
+  }
+  
+  .toggle .toggle-left h1,
+  .toggle .toggle-right h1 {
+    font-size: 16px;
+  }
+  
+  .toggle-left p,
+  .toggle-right p {
+    font-size: 12px;
+  }
+  
+  .login-container button {
+    padding: 6px 25px;
+    font-size: 9px;
+  }
+  
+  .verification-modal-content {
+    padding: 20px 12px;
+  }
+  
+  .verification-modal-content h3 {
+    font-size: 18px;
+  }
+}
+
+/* Ensure forms stay properly positioned on small screens */
+@media (max-width: 768px) {
+  .login-form,
+  .register-form {
+    width: 50%;
+  }
+  
+  .toggle-container {
+    width: 50%;
+  }
+}
+
+/* Adjust toggle panel text wrapping */
+.toggle-left h1,
+.toggle-right h1 {
+  word-wrap: break-word;
+  padding: 0 5px;
+}
+
+/* Make sure messages are visible but smaller on mobile */
+.registerMessage,
+.loginMessage {
+  font-size: 0.9rem;
+  padding: 8px 4px;
+  margin: 8px;
+}
+
+@media (max-width: 480px) {
+  .registerMessage,
+  .loginMessage {
+    font-size: 0.8rem;
+    padding: 6px 3px;
+    margin: 6px;
+  }
+}
+
+/* Adjust logo position for mobile */
+.login-logo {
+  top: -20px;
+  left: 20px;
+}
+
+@media (max-width: 768px) {
+  .login-logo {
+    top: -15px;
+    left: 15px;
+  }
+  
+  .login-logo img {
+    width: 150px;
+    height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-logo {
+    top: -10px;
+    left: 10px;
+  }
+  
+  .login-logo img {
+    width: 120px;
+  }
+}
+
+/* Improve form input spacing on small screens */
+.password-wrapper {
+  width: 100%;
+}
+
+/* Adjust animation speeds for smoother transitions on mobile */
+@media (max-width: 768px) {
+  .login-form,
+  .register-form,
+  .toggle-container,
+  .toggle {
+    transition: all 0.4s ease-in-out;
+  }
+}
+
+/* Ensure the page wrapper takes full viewport */
+.login-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Add some bottom padding to prevent content from being cut off */
+@media (max-height: 700px) {
+  .login-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Keep navbar responsive */
+@media (max-width: 768px) {
+  nav ul.hideOnMobile {
+    display: none;
+  }
+  
+  .menu-button {
+    display: block;
+  }
+}
+
+/* Adjust forgot password link */
+.forgot-password {
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .forgot-password {
+    font-size: 11px;
+  }
+}

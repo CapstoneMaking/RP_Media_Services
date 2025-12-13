@@ -1,0 +1,1264 @@
+import React, { useState, useEffect, useRef } from 'react'; // Added useRef
+import { Link, useNavigate } from 'react-router-dom';
+import { collection, addDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '../utils/firebase';
+import { useAuth } from '../context/AuthContext';
+import { firebaseService } from '../services/firebaseService';
+
+const ConfirmationPage = () => {
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [bookingData, setBookingData] = useState({});
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [policyContent, setPolicyContent] = useState('');
+  const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasValidBooking, setHasValidBooking] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    name: '',
+    email: '',
+    contact: ''
+  });
+  const [formData, setFormData] = useState({
+    region: '',
+    province: '',
+    city: '',
+    specificAddress: ''
+  });
+  const [isUserVerified, setIsUserVerified] = useState(false);
+  const [verificationData, setVerificationData] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentSuccessful, setPaymentSuccessful] = useState(false);
+  const [isPayPalSdkLoaded, setIsPayPalSdkLoaded] = useState(false);
+
+  const { isVerified, refreshVerificationStatus } = useAuth();
+  const navigate = useNavigate();
+
+
+  // Use ref to track PayPal script
+  const paypalScriptRef = useRef(null);
+  const paypalButtonsRef = useRef(null);
+
+  // Philippine Locations Data
+  const philippineLocations = {
+    "National Capital Region (NCR)": {
+      "Metro Manila": [
+        "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong",
+        "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque",
+        "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan",
+        "Taguig", "Valenzuela"
+      ]
+    },
+    "Region IV-A (CALABARZON)": {
+      "Batangas": [
+        "Agoncillo", "Alitagtag", "Balayan", "Balete", "Batangas City",
+        "Bauan", "Calaca", "Calatagan", "Cuenca", "Ibaan", "Laurel",
+        "Lemery", "Lian", "Lipa City", "Lobo", "Mabini", "Malvar",
+        "Mataasnakahoy", "Nasugbu", "Padre Garcia", "Rosario", "San Jose",
+        "San Juan", "San Luis", "San Nicolas", "San Pascual", "Santa Teresita",
+        "Santo Tomas", "Taal", "Talisay", "Tanauan City", "Taysan", "Tingloy",
+        "Tuy"
+      ],
+      "Cavite": [
+        "Alfonso", "Amadeo", "Bacoor City", "Carmona", "Cavite City",
+        "Dasmariñas City", "General Emilio Aguinaldo", "General Trias City",
+        "Imus City", "Indang", "Kawit", "Magallanes", "Maragondon", "Mendez",
+        "Naic", "Noveleta", "Rosario", "Silang", "Tagaytay City", "Tanza",
+        "Ternate", "Trece Martires City"
+      ],
+      "Laguna": [
+        "Alaminos", "Bay", "Biñan City", "Cabuyao City", "Calamba City",
+        "Calauan", "Cavinti", "Famy", "Kalayaan", "Liliw", "Los Baños",
+        "Luisiana", "Lumban", "Mabitac", "Magdalena", "Majayjay", "Nagcarlan",
+        "Paete", "Pagsanjan", "Pakil", "Pangil", "Pila", "Rizal", "San Pablo City",
+        "San Pedro City", "Santa Cruz", "Santa Maria", "Santa Rosa City", "Siniloan",
+        "Victoria"
+      ],
+      "Quezon": [
+        "Agdangan", "Alabat", "Atimonan", "Buenavista", "Burdeos", "Calauag",
+        "Candelaria", "Catanauan", "Dolores", "General Luna", "General Nakar",
+        "Guinayangan", "Gumaca", "Infanta", "Jomalig", "Lopez", "Lucban",
+        "Lucena City", "Macalelon", "Mauban", "Mulanay", "Padre Burgos",
+        "Pagbilao", "Panukulan", "Patnanungan", "Perez", "Pitogo", "Plaridel",
+        "Polillo", "Quezon", "Real", "Sampaloc", "San Andres", "San Antonio",
+        "San Francisco", "San Narciso", "Sariaya", "Tagkawayan", "Tayabas City",
+        "Tiaong", "Unisan"
+      ],
+      "Rizal": [
+        "Angono", "Antipolo City", "Baras", "Binangonana", "Cainta", "Cardona",
+        "Jalajala", "Morong", "Pililla", "Rodriguez", "San Mateo", "Tanay",
+        "Taytay", "Teresa"
+      ]
+    },
+    "Region III (Central Luzon)": {
+      "Bulacan": [
+        "Angat", "Balagtas", "Baliuag", "Bocaue", "Bulacan", "Bustos",
+        "Calumpit", "Doña Remedios Trinidad", "Guiguinto", "Hagonoy",
+        "Malolos City", "Marilao", "Meycauyan City", "Norzagaray",
+        "Obando", "Pandi", "Paombong", "Plaridel", "Pulilan", "San Ildefonso",
+        "San Jose del Monte City", "San Miguel", "San Rafael", "Santa Maria"
+      ],
+      "Pampanga": [
+        "Angeles City", "Apalit", "Arayat", "Bacolor", "Candaba",
+        "Floridablanca", "Guagua", "Lubao", "Mabalacat City", "Macabebe",
+        "Magalang", "Masantol", "Mexico", "Minalin", "Porac", "San Fernando City",
+        "San Luis", "San Simon", "Santa Ana", "Santa Rita", "Santo Tomas",
+        "Sasmuan"
+      ]
+    }
+  };
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const { user, isAdmin } = useAuth();
+
+  const showSidebar = () => {
+    setSidebarVisible(true);
+  };
+
+  const hideSidebar = () => {
+    setSidebarVisible(false);
+  };
+
+  // Load PayPal SDK - SIMPLIFIED VERSION
+  useEffect(() => {
+    // Only load PayPal when payment modal is shown
+    if (showPaymentModal && !isPayPalSdkLoaded && !window.paypal) {
+      console.log('Loading PayPal SDK...');
+
+      const script = document.createElement('script');
+      script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.REACT_APP_PAYPAL_CLIENT_ID || 'test'}&currency=PHP`;
+      script.async = true;
+      script.id = 'paypal-sdk-script';
+
+      script.onload = () => {
+        console.log('PayPal SDK loaded successfully');
+        setIsPayPalSdkLoaded(true);
+        paypalScriptRef.current = script;
+
+        // Initialize PayPal buttons after script loads
+        setTimeout(initializePayPalButtons, 100);
+      };
+
+      script.onerror = (error) => {
+        console.error('Failed to load PayPal SDK:', error);
+        setErrorMessage('Failed to load payment system. Please refresh the page or try again later.');
+        setIsPayPalSdkLoaded(false);
+      };
+
+      document.head.appendChild(script);
+
+      return () => {
+        // Clean up PayPal buttons if they exist
+        if (paypalButtonsRef.current) {
+          try {
+            paypalButtonsRef.current.close();
+          } catch (error) {
+            console.log('Error closing PayPal buttons:', error);
+          }
+          paypalButtonsRef.current = null;
+        }
+
+        // Don't remove script if payment is successful or processing
+        if (!paymentSuccessful && !isProcessingPayment && paypalScriptRef.current) {
+          try {
+            if (paypalScriptRef.current.parentNode) {
+              paypalScriptRef.current.parentNode.removeChild(paypalScriptRef.current);
+            }
+          } catch (error) {
+            console.log('Error removing PayPal script:', error);
+          }
+          paypalScriptRef.current = null;
+          setIsPayPalSdkLoaded(false);
+        }
+      };
+    }
+  }, [showPaymentModal, isPayPalSdkLoaded, paymentSuccessful, isProcessingPayment]);
+
+  // Initialize PayPal buttons
+  const initializePayPalButtons = () => {
+    if (!window.paypal || !showPaymentModal) {
+      console.log('PayPal not available or modal not shown');
+      return;
+    }
+
+    console.log('Initializing PayPal buttons...');
+
+    const container = document.getElementById('paypal-button-container');
+    if (!container) {
+      console.error('PayPal button container not found');
+      return;
+    }
+
+    // Clear container first
+    container.innerHTML = '';
+
+    try {
+      const buttons = window.paypal.Buttons({
+        style: {
+          layout: 'vertical',
+          color: 'blue',
+          shape: 'rect',
+          label: 'paypal',
+          height: 55,
+        },
+        createOrder: function (data, actions) {
+          console.log('Creating PayPal order...');
+          return actions.order.create({
+            purchase_units: [{
+              amount: {
+                value: '1000.00',
+                currency_code: 'PHP'
+              },
+              description: 'Reservation Fee for Equipment Rental'
+            }]
+          });
+        },
+        onApprove: async function (data, actions) {
+          console.log('PayPal payment approved:', data.orderID);
+          setIsProcessingPayment(true);
+
+          try {
+            const details = await actions.order.capture();
+            console.log('Payment captured successfully:', details);
+
+            // Create payment details object
+            const paymentDetails = {
+              orderID: data.orderID,
+              paymentID: details.id,
+              payerID: data.payerID,
+              status: details.status,
+              create_time: details.create_time,
+              update_time: details.update_time,
+              email: details.payer.email_address,
+              name: `${details.payer.name.given_name} ${details.payer.name.surname}`,
+              payer: details.payer
+            };
+
+            // Save booking with payment details
+            await saveBooking(paymentDetails);
+
+            setPaymentSuccessful(true);
+
+          } catch (error) {
+            console.error('Payment processing error:', error);
+            setErrorMessage('Payment successful but booking save failed. Please contact support.');
+            setIsProcessingPayment(false);
+          }
+        },
+        onError: function (err) {
+          console.error('PayPal payment error:', err);
+          setErrorMessage('Payment failed. Please try again or use a different payment method.');
+          setIsProcessingPayment(false);
+        },
+        onCancel: function (data) {
+          console.log('Payment cancelled by user');
+          setErrorMessage('Payment was cancelled. Please complete payment to confirm your booking.');
+        }
+      });
+
+      if (buttons.isEligible()) {
+        buttons.render('#paypal-button-container').then((instance) => {
+          console.log('PayPal buttons rendered successfully');
+          paypalButtonsRef.current = instance;
+        }).catch((error) => {
+          console.error('Error rendering PayPal buttons:', error);
+          setErrorMessage('Failed to load payment buttons. Please refresh the page.');
+        });
+      } else {
+        console.error('PayPal buttons not eligible');
+        setErrorMessage('PayPal payment is not available. Please try another payment method.');
+      }
+
+    } catch (error) {
+      console.error('Error initializing PayPal buttons:', error);
+      setErrorMessage('Failed to initialize payment system. Please try again.');
+    }
+  };
+
+  // Re-initialize PayPal buttons when SDK loads
+  useEffect(() => {
+    if (isPayPalSdkLoaded && showPaymentModal) {
+      initializePayPalButtons();
+    }
+  }, [isPayPalSdkLoaded, showPaymentModal]);
+
+  // Function to format full name from verification data
+  const formatFullName = (verification) => {
+    if (!verification) return '';
+
+    let fullName = verification.firstName || '';
+
+    if (verification.middleName) {
+      fullName += ` ${verification.middleName}`;
+    }
+
+    if (verification.lastName) {
+      fullName += ` ${verification.lastName}`;
+    }
+
+    if (verification.suffix) {
+      fullName += ` ${verification.suffix}`;
+    }
+
+    return fullName.trim();
+  };
+
+  // Function to fetch user verification data
+  const fetchUserVerificationData = async (userEmail) => {
+    try {
+      console.log('Fetching verification data for:', userEmail);
+
+      const result = await firebaseService.getUserVerification(userEmail);
+      console.log('Verification result:', result);
+
+      if (result.success && result.verification) {
+        const verification = result.verification;
+        console.log('Found verification data structure:', verification);
+
+        setVerificationData(verification);
+
+        const fullName = formatFullName(verification);
+
+        const contact = verification.contactNumber ||
+          verification.mobileNumber ||
+          verification.phoneNumber ||
+          verification.contact ||
+          verification.phoneNumber ||
+          '';
+
+        console.log('Extracted data:', { fullName, contact });
+
+        return { name: fullName, contact };
+      } else {
+        console.log('No verification data found for user or result not successful');
+        return { name: '', contact: '' };
+      }
+
+    } catch (error) {
+      console.error('Error fetching verification data:', error);
+      return { name: '', contact: '' };
+    }
+  };
+
+  // Function to fetch user data from Firestore users collection
+  const fetchUserData = async (userEmail) => {
+    try {
+      console.log('Fetching user data for:', userEmail);
+
+      const userDoc = await firebaseService.getUserByEmail(userEmail);
+      console.log('User document found:', userDoc);
+
+      if (userDoc) {
+        const name = userDoc.name || userDoc.fullName || userDoc.displayName || '';
+
+        const contact = userDoc.contactNumber ||
+          userDoc.mobileNumber ||
+          userDoc.phoneNumber ||
+          userDoc.phone ||
+          userDoc.contact ||
+          '';
+
+        console.log('Extracted user data:', { name, contact });
+        return { name, contact };
+      }
+
+      console.log('No user data found in users collection');
+      return { name: '', contact: '' };
+
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return { name: '', contact: '' };
+    }
+  };
+
+  // Function to check verification status
+  const checkVerificationStatus = async (userEmail) => {
+    if (!userEmail) {
+      setIsUserVerified(false);
+      return false;
+    }
+
+    try {
+      console.log('Checking verification status for:', userEmail);
+
+      if (isVerified) {
+        console.log('User is verified (from AuthContext)');
+        setIsUserVerified(true);
+        return true;
+      }
+
+      console.log('Manually checking verification status...');
+      const isVerifiedManually = await refreshVerificationStatus();
+      setIsUserVerified(isVerifiedManually);
+      return isVerifiedManually;
+
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      setIsUserVerified(false);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    console.log('ConfirmationPage mounted - checking localStorage...');
+
+    const loadBookingData = () => {
+      try {
+        const items = JSON.parse(localStorage.getItem("selectedItems")) || [];
+        const pkg = JSON.parse(localStorage.getItem("selectedPackage"));
+        const booking = JSON.parse(localStorage.getItem("bookingFormData")) || {};
+
+        console.log('Loaded from localStorage:', {
+          itemsCount: items.length,
+          package: pkg ? pkg.name : 'none',
+          bookingDates: booking
+        });
+
+        if (items.length === 0 && !pkg) {
+          console.warn('No items or package selected');
+          setHasValidBooking(false);
+          return;
+        }
+
+        setSelectedItems(items);
+        setSelectedPackage(pkg);
+        setBookingData(booking);
+
+      } catch (error) {
+        console.error('Error loading data from localStorage:', error);
+        setSelectedItems([]);
+        setSelectedPackage(null);
+        setBookingData({});
+        setHasValidBooking(false);
+      }
+    };
+
+    loadBookingData();
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user);
+      setCurrentUser(user);
+
+      if (user) {
+        const authName = user.displayName || '';
+        const authEmail = user.email || '';
+
+        console.log('Auth data:', { authName, authEmail });
+
+        await checkVerificationStatus(user.email);
+
+        const verificationDataResult = await fetchUserVerificationData(user.email);
+        console.log('Verification data:', verificationDataResult);
+
+        if ((!verificationDataResult.name && !verificationDataResult.contact) ||
+          (verificationDataResult.name === '' && verificationDataResult.contact === '')) {
+          console.log('Trying to fetch from users collection...');
+          const userData = await fetchUserData(user.email);
+          console.log('User collection data:', userData);
+
+          verificationDataResult.name = verificationDataResult.name || userData.name || '';
+          verificationDataResult.contact = verificationDataResult.contact || userData.contact || '';
+        }
+
+        const updatedUserInfo = {
+          name: verificationDataResult.name || authName,
+          email: authEmail,
+          contact: verificationDataResult.contact
+        };
+
+        setUserInfo(updatedUserInfo);
+
+        console.log('Final auto-filled user info:', updatedUserInfo);
+        console.log('User verification status:', isUserVerified);
+      } else {
+        setIsUserVerified(false);
+      }
+
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const isValid = (selectedItems.length > 0 || selectedPackage) &&
+      bookingData.startDate &&
+      bookingData.endDate;
+    setHasValidBooking(isValid);
+    console.log('Booking validity check:', {
+      hasItems: selectedItems.length > 0,
+      hasPackage: !!selectedPackage,
+      hasDates: !!(bookingData.startDate && bookingData.endDate),
+      isValid: isValid
+    });
+  }, [selectedItems, selectedPackage, bookingData]);
+
+  const policyTexts = {
+    userAgreement: `
+      <h1>User Agreement</h1>
+      <p>By using our services, you agree to the terms below. This agreement is between you ("User" or "Renter") and <strong>RP MEDIA SERVICES</strong>.</p>
+      <h2>1.1. Eligibility</h2>
+      <p>You must be at least 18 years old and provide a valid government-issued ID to rent any equipment.</p>
+      <h2>1.2. Account Responsibility</h2>
+      <p>You are responsible for the security of your account and any equipment rented through it.</p>
+      <h2>1.3. Rental Usage</h2>
+      <p>You agree to use the equipment only for legal purposes and to take care of the items as if they were your own.</p>
+    `,
+    privacyPolicy: `
+      <h1>Privacy Policy</h1>
+      <h2>2.1. Information We Collect</h2>
+      <ul>
+        <li>Full Name</li>
+        <li>Contact Information</li>
+        <li>Government-issued ID</li>
+        <li>Payment Details</li>
+      </ul>
+      <h2>2.2. Use of Information</h2>
+      <p>We use your information for verification, processing rentals, and legal compliance.</p>
+    `,
+    paymentPolicy: `
+      <h1>Payment and Fees Policy</h1>
+      <h2>3.1. Payment Methods</h2>
+      <p>We accept Bank Transfer and Paypal.</p>
+      <h2>3.2. Payment Terms</h2>
+      <ul>
+        <li>Full payment required before equipment release</li>
+        <li>₱1000 reservation fee required to secure booking</li>
+        <li>Late returns charged 100% of rental fee per day</li>
+      </ul>
+    `,
+    rentalPolicy: `
+      <h1>Equipment and Rental Policy</h1>
+      <h2>4.1. Equipment Inspection</h2>
+      <p>All cameras include battery, SDI, HDMI, SD card, and charger.</p>
+      <h2>4.2. Renter Responsibilities</h2>
+      <ul>
+        <li>Responsible for equipment during rental period</li>
+        <li>Do not attempt repairs</li>
+        <li>Report damages immediately</li>
+      </ul>
+    `
+  };
+
+  const showPolicy = (policyKey) => {
+    setPolicyContent(policyTexts[policyKey]);
+    setShowPolicyModal(true);
+  };
+
+  const closePolicyModal = () => setShowPolicyModal(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === 'region') {
+      setFormData({
+        ...formData,
+        region: value,
+        province: '',
+        city: ''
+      });
+    } else if (name === 'province') {
+      setFormData({
+        ...formData,
+        province: value,
+        city: ''
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
+  };
+
+  // Function to validate form before showing payment
+  const validateForm = () => {
+    if (!currentUser) {
+      setErrorMessage("You must be logged in to make a booking.");
+      return false;
+    }
+
+    const userIsVerified = isVerified || isUserVerified;
+
+    if (!userIsVerified) {
+      setShowVerificationModal(true);
+      return false;
+    }
+
+    if (!userInfo.name || !userInfo.email || !userInfo.contact ||
+      !formData.region || !formData.province || !formData.city || !formData.specificAddress) {
+      setErrorMessage("Please fill out all required fields including complete address details.");
+      return false;
+    }
+
+    const checkboxes = ['agreement1', 'agreement2', 'agreement3'];
+    const allChecked = checkboxes.every(id => document.getElementById(id)?.checked);
+    if (!allChecked) {
+      setErrorMessage("Please agree to all required policies before booking.");
+      return false;
+    }
+
+    return true;
+  };
+
+  // Function to show payment modal
+  const handleProceedToPayment = (e) => {
+    e.preventDefault();
+
+    if (validateForm()) {
+      setShowPaymentModal(true);
+      setErrorMessage("");
+    }
+  };
+
+  // Function to save booking after successful payment
+  const saveBooking = async (paymentDetails = null) => {
+    try {
+      // Create combined address string
+      const fullAddress = `${formData.specificAddress}, ${formData.city}, ${formData.province}, ${formData.region}`;
+
+      // Calculate balances
+      const reservationFeePaid = 1000;
+      const remainingBalance = total;
+
+      // Create booking object
+      const booking = {
+        // User Information
+        ...userInfo,
+        ...formData,
+        venue: fullAddress,
+
+        // Booking Details
+        startDate: bookingData.startDate,
+        endDate: bookingData.endDate,
+        items: selectedItems.length ? selectedItems : null,
+        package: selectedPackage ? selectedPackage : null,
+
+        // Financial Information
+        totalRentalAmount: total, // Total cost of rental
+        reservationFee: reservationFeePaid, // Reservation fee amount
+        reservationFeePaid: reservationFeePaid, // Amount paid now
+        remainingBalance: remainingBalance, // Balance to pay later
+        paymentStatus: 'reservation_paid', // NOT 'paid' - it's just reservation
+        fullPaymentStatus: 'pending', // Full payment status
+
+        // Payment Details
+        paymentDetails: paymentDetails ? {
+          paymentId: paymentDetails.paymentID || paymentDetails.orderID,
+          paypalOrderId: paymentDetails.orderID,
+          paypalPayerId: paymentDetails.payerID,
+          payerEmail: paymentDetails.email,
+          payerName: paymentDetails.name,
+          paymentMethod: 'paypal',
+          amount: reservationFeePaid,
+          currency: 'PHP',
+          status: 'completed',
+          paymentType: 'reservation_fee', // Important: specifies this is only reservation
+          paidAt: paymentDetails.create_time || new Date().toISOString()
+        } : null,
+
+        // System Fields
+        timestamp: new Date().toISOString(),
+        userId: currentUser.uid,
+        bookingStatus: 'reserved', // Booking status is 'reserved', not 'paid'
+
+        // Verification Details
+        verificationDetails: verificationData ? {
+          firstName: verificationData.firstName,
+          middleName: verificationData.middleName,
+          lastName: verificationData.lastName,
+          suffix: verificationData.suffix,
+          idType: verificationData.idType,
+          idNumber: verificationData.idNumber
+        } : null
+      };
+
+      console.log('Saving booking to Firestore:', booking);
+
+      // Save to Firestore bookings collection
+      const docRef = await addDoc(collection(db, "bookings"), booking);
+
+      console.log('Booking saved with ID:', docRef.id);
+
+      setMessage("Booking reserved successfully! ₱1,000 reservation fee paid. Redirecting...");
+      setErrorMessage("");
+
+      // Clear ALL rental data
+      localStorage.removeItem("bookingFormData");
+      localStorage.removeItem("selectedItems");
+      localStorage.removeItem("selectedPackage");
+
+      console.log('Cleared all rental data from localStorage');
+
+      // Show success and redirect
+      setTimeout(() => navigate("/userDashboard"), 2000);
+
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      setErrorMessage("Error saving booking. Please contact support.");
+    }
+  };
+
+  const handleStartVerification = () => {
+    setShowVerificationModal(false);
+    navigate('/userDashboard');
+  };
+
+  const handleCloseVerificationModal = () => setShowVerificationModal(false);
+
+  // Calculate rental days
+  const rentalDays = bookingData.startDate && bookingData.endDate
+    ? Math.ceil((new Date(bookingData.endDate) - new Date(bookingData.startDate)) / (1000 * 60 * 60 * 24)) + 1
+    : 0;
+
+  // Calculate daily rate and total
+  const dailyRate = selectedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0) ||
+    (selectedPackage ? selectedPackage.price : 0);
+
+  const total = dailyRate * rentalDays;
+
+  // Reservation fee
+  const reservationFee = 1000;
+  const remainingBalance = total;
+
+  // Get available provinces based on selected region
+  const availableProvinces = formData.region ? Object.keys(philippineLocations[formData.region] || {}) : [];
+
+  // Get available cities based on selected province
+  const availableCities = formData.region && formData.province ? philippineLocations[formData.region][formData.province] || [] : [];
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+        <div className="spinner"></div>
+        <p>Loading your booking details...</p>
+      </div>
+    );
+  }
+
+  const userIsVerified = isVerified || isUserVerified;
+
+  return (
+    <>
+      {/* Navbar and sidebar */}
+      <nav>
+        <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
+          <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
+          <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
+          <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
+          <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
+          <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
+          <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
+          <li><Link to="/about" onClick={hideSidebar}>About us</Link></li>
+
+          {/* Conditional Dashboard Links */}
+          {user ? (
+            isAdmin ? (
+              <li><Link to="/AdminDashboard" onClick={hideSidebar}>Admin Dashboard</Link></li>
+            ) : (
+              <li><Link to="/UserDashboard" onClick={hideSidebar}>My Dashboard</Link></li>
+            )
+          ) : (
+            <li><Link to="/login-register" onClick={hideSidebar}>Login</Link></li>
+          )}
+        </ul>
+        <ul>
+          <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
+          <li className="hideOnMobile"><Link to="/home">Home</Link></li>
+          <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
+          <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
+          <li className="hideOnMobile"><Link to="/services">Services</Link></li>
+          <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
+          <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
+
+          {/* Conditional Main Nav Icons */}
+          {user ? (
+            isAdmin ? (
+              <li className="hideOnMobile">
+                <Link to="/AdminDashboard" title="Admin Dashboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                    <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                  </svg>
+                </Link>
+              </li>
+            ) : (
+              <li className="hideOnMobile">
+                <Link to="/UserDashboard" title="User Dashboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                    <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                  </svg>
+                </Link>
+              </li>
+            )
+          ) : (
+            <li className="hideOnMobile">
+              <Link to="/login-register" title="Login / Register">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                  <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                </svg>
+              </Link>
+            </li>
+          )}
+
+          <li className="menu-button" onClick={showSidebar}>
+            <a href="#">
+              <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z" />
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      {/* Confirmation Content */}
+      <h1 className="confirmation-header">Confirm Your Booking</h1>
+
+      <section className="confirmation-container">
+        <section className="confirmation-wrapper">
+          <h2>Booking Summary</h2>
+
+          <div className="summary" id="bookingSummary">
+            {!hasValidBooking ? (
+              <div className="empty-state">
+                <div className="empty-icon">📋</div>
+                <h3>Incomplete Booking</h3>
+                <p>Please select items/package and schedule dates first.</p>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                  <button
+                    onClick={() => navigate('/rent-items')}
+                    className="btn btn-primary"
+                  >
+                    Select Items
+                  </button>
+                  <button
+                    onClick={() => navigate('/packages')}
+                    className="btn btn-secondary"
+                  >
+                    View Packages
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="summary-cards">
+                {/* Schedule Card */}
+                <div className="summary-card">
+                  <div className="card-header">
+                    <h3>Rental Schedule</h3>
+                  </div>
+                  <div className="card-body">
+                    <div className="schedule-info">
+                      <div className="info-row">
+                        <span className="info-label">Start Date:</span>
+                        <span className="info-value">{bookingData.startDate}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">End Date:</span>
+                        <span className="info-value">{bookingData.endDate}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">Duration:</span>
+                        <span className="info-value">{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items/Package Card */}
+                <div className="summary-card">
+                  <div className="card-header">
+                    <h3>{selectedPackage ? 'Selected Package' : 'Rental Items'}</h3>
+                  </div>
+                  <div className="card-body">
+                    {selectedPackage ? (
+                      <div className="package-details">
+                        <h4>{selectedPackage.name}</h4>
+                        <p className="package-description">{selectedPackage.description}</p>
+                      </div>
+                    ) : (
+                      <div className="items-details">
+                        <table className="items-table">
+                          <thead>
+                            <tr>
+                              <th>Item</th>
+                              <th>Qty</th>
+                              <th>Price</th>
+                              <th>Subtotal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedItems.map((item, index) => (
+                              <tr key={index}>
+                                <td>{item.name}</td>
+                                <td>{item.quantity}</td>
+                                <td>₱{item.price?.toFixed(2)}</td>
+                                <td>₱{item.subtotal?.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <div className="items-count">
+                          Total Items: {selectedItems.length}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Total Card */}
+                <div className="summary-card total-card">
+                  <div className="card-header">
+                    <h3>Payment Summary</h3>
+                  </div>
+                  <div className="card-body">
+                    <div className="cost-breakdown">
+                      {selectedPackage ? (
+                        <>
+                          <div className="cost-line">
+                            <span>Package Daily Rate:</span>
+                            <span>₱{dailyRate.toLocaleString()}</span>
+                          </div>
+                          <div className="cost-line">
+                            <span>Rental Duration:</span>
+                            <span>{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="cost-line">
+                            <span>Total Rental Amount:</span>
+                            <span>₱{total.toLocaleString()}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="cost-line">
+                            <span>Items Daily Rate: </span>
+                            <span>₱{dailyRate.toLocaleString()}</span>
+                          </div>
+                          <div className="cost-line">
+                            <span>Rental Duration: </span>
+                            <span>{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="cost-line">
+                            <span>Total Rental Amount: </span>
+                            <span>₱{total.toLocaleString()}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Reservation Fee */}
+                      <div className="cost-line reservation-fee">
+                        <span>Reservation Fee: </span>
+                        <span>₱{reservationFee.toLocaleString()}</span>
+                      </div>
+
+                      {/* Remaining Balance */}
+                      <div className="cost-line remaining-balance">
+                        <span>Remaining Balance: </span>
+                        <span>₱{remainingBalance.toLocaleString()}</span>
+                      </div>
+
+                      <div className="cost-line total">
+                        <span>Amount to Pay Now: </span>
+                        <span className="highlight-amount">₱{reservationFee.toLocaleString()}</span>
+                      </div>
+
+                      <div className="payment-note">
+                        <small>
+                          <strong>Note:</strong> ₱1,000 reservation fee is required to secure your booking.
+                          The remaining balance of ₱{remainingBalance.toLocaleString()} will be handled according to the agreement between the client and the equipment owner.
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {hasValidBooking && (
+            <form className="confirmForm" id="confirmForm" onSubmit={handleProceedToPayment}>
+              <h3>Contact Information</h3>
+
+              {/* User Information Display - Single Line */}
+              <div className="user-info-display-section">
+                <div className="user-info-line">
+                  <div className="user-info-label">Full Name:</div>
+                  <div className="user-info-value-display">
+                    {userInfo.name || "Not available"}
+                  </div>
+                </div>
+
+                <div className="user-info-line">
+                  <div className="user-info-label">Email Address:</div>
+                  <div className="user-info-value-display">
+                    {userInfo.email || "Not available"}
+                  </div>
+                </div>
+
+                <div className="user-info-line">
+                  <div className="user-info-label">Contact Number:</div>
+                  <div className="user-info-value-display">
+                    {userInfo.contact || "Not available"}
+                    {!userInfo.contact && (
+                      <small className="missing-note">
+                        (Please add contact in verification)
+                      </small>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="form-grid">
+                {/* Multi-level Location Selector */}
+                <div className="form-group">
+                  <label htmlFor="region">Region *</label>
+                  <select
+                    id="region"
+                    name="region"
+                    value={formData.region}
+                    onChange={handleInputChange}
+                    required
+                    className="form-input"
+                  >
+                    <option value="">Select Region</option>
+                    {Object.keys(philippineLocations).map(region => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="province">Province *</label>
+                  <select
+                    id="province"
+                    name="province"
+                    value={formData.province}
+                    onChange={handleInputChange}
+                    required
+                    disabled={!formData.region}
+                    className="form-input"
+                  >
+                    <option value="">Select Province</option>
+                    {availableProvinces.map(province => (
+                      <option key={province} value={province}>{province}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="city">City/Municipality *</label>
+                  <select
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    required
+                    disabled={!formData.province}
+                    className="form-input"
+                  >
+                    <option value="">Select City/Municipality</option>
+                    {availableCities.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group full-width">
+                  <label htmlFor="specificAddress">Specific Address *</label>
+                  <input
+                    type="text"
+                    id="specificAddress"
+                    name="specificAddress"
+                    value={formData.specificAddress}
+                    onChange={handleInputChange}
+                    required
+                    className="form-input"
+                    placeholder="Street, Barangay, Building, House No., etc."
+                  />
+                  <small style={{ color: '#666', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                    Please provide complete address details for delivery
+                  </small>
+                </div>
+              </div>
+
+              <div className="agreement-section">
+                <h3>Please agree to the following:</h3>
+
+                <label className="checkbox-label">
+                  <input type="checkbox" id="agreement1" required />
+                  I've read and agree to the{' '}
+                  <button type="button" onClick={() => showPolicy('userAgreement')} className="policy-link">
+                    User Agreement
+                  </button>{' '}
+                  and{' '}
+                  <button type="button" onClick={() => showPolicy('privacyPolicy')} className="policy-link">
+                    Privacy Policy
+                  </button>
+                </label>
+
+                <label className="checkbox-label">
+                  <input type="checkbox" id="agreement2" required />
+                  I've read and agreed to the{' '}
+                  <button type="button" onClick={() => showPolicy('paymentPolicy')} className="policy-link">
+                    Payments and Fees Policy
+                  </button>
+                </label>
+
+                <label className="checkbox-label">
+                  <input type="checkbox" id="agreement3" required />
+                  I've read and agreed to the{' '}
+                  <button type="button" onClick={() => showPolicy('rentalPolicy')} className="policy-link">
+                    Equipment Rental Policy
+                  </button>
+                </label>
+              </div>
+
+              <button
+                className="confirmbtn"
+                type="submit"
+                disabled={isProcessingPayment}
+              >
+                {isProcessingPayment ? 'Processing...' : 'Pay Reservation Fee (₱1,000)'}
+              </button>
+
+              {errorMessage && (
+                <div className="error-message">
+                  {errorMessage}
+                </div>
+              )}
+              {message && (
+                <div className="success-message">
+                  {message}
+                </div>
+              )}
+            </form>
+          )}
+
+          {/* Policy Modal */}
+          <div
+            className="policy-modal"
+            id="policyModal"
+            style={{ display: showPolicyModal ? 'flex' : 'none' }}
+          >
+            <div className="policy-modal-content">
+              <span className="close-modal" onClick={closePolicyModal}>&times;</span>
+              <div id="policyContent" dangerouslySetInnerHTML={{ __html: policyContent }}></div>
+            </div>
+          </div>
+
+          {/* Verification Required Modal */}
+          <div
+            className="policy-modal"
+            style={{ display: showVerificationModal ? 'flex' : 'none' }}
+          >
+            <div className="policy-modal-content">
+              <span className="close-modal" onClick={handleCloseVerificationModal}>&times;</span>
+              <div className="verification-content">
+                <h2>Identity Verification Required</h2>
+                <p>
+                  You need to verify your identity before you can confirm bookings.
+                  This helps us ensure the security of our equipment and services.
+                </p>
+
+                <div className="verification-steps">
+                  <h4>Verification Process:</h4>
+                  <ul>
+                    <li>Submit valid government ID (ePhil ID or National ID)</li>
+                    <li>Take a clear selfie</li>
+                    <li>Admin approval within a week</li>
+                  </ul>
+                </div>
+
+                <div className="verification-actions">
+                  <button onClick={handleStartVerification} className="btn btn-primary">
+                    Start Verification
+                  </button>
+                  <button onClick={handleCloseVerificationModal} className="btn btn-secondary">
+                    Maybe Later
+                  </button>
+                </div>
+
+                <p className="verification-note">
+                  You can complete verification in your User Dashboard anytime.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Modal */}
+          <div
+            className="policy-modal"
+            style={{ display: showPaymentModal ? 'flex' : 'none' }}
+          >
+            <div className="policy-modal-content payment-modal-content">
+              <span className="close-modal" onClick={() => {
+                if (!isProcessingPayment && !paymentSuccessful) {
+                  setShowPaymentModal(false);
+                }
+              }}>&times;</span>
+
+              {paymentSuccessful ? (
+                <div className="payment-success">
+                  <div className="success-icon">✓</div>
+                  <h2>Reservation Fee Paid!</h2>
+                  <p>Your booking has been reserved with ₱1,000 reservation fee.
+                    The remaining balance of ₱{remainingBalance.toLocaleString()} will be paid upon equipment pickup.</p>
+                </div>
+              ) : (
+                <div className="payment-content">
+                  <h2>Pay Reservation Fee</h2>
+                  <p>Please pay ₱1,000 reservation fee to secure your booking.</p>
+
+                  <div className="payment-summary">
+                    <div className="payment-line">
+                      <span>Reservation Fee:</span>
+                      <span className="payment-amount">₱1,000.00</span>
+                    </div>
+                    <div className="payment-line">
+                      <span>Remaining Balance:</span>
+                      <span className="payment-amount">₱{remainingBalance.toLocaleString()}</span>
+                    </div>
+                    <div className="payment-total">
+                      <span>To Pay Now:</span>
+                      <span className="payment-total-amount">₱1,000.00</span>
+                    </div>
+                  </div>
+
+                  <div className="paypal-container">
+                    <div id="paypal-button-container">
+                      {!isPayPalSdkLoaded && (
+                        <div className="loading-payment">
+                          <p>Loading payment system...</p>
+                          <div className="spinner-small"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="payment-note">
+                    <strong>Note:</strong> This is only a reservation fee.
+                    Full payment of ₱{remainingBalance.toLocaleString()} will be required upon equipment pickup.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </section>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="copyright">
+          <div className="column ss-copyright">
+            <span>&copy; 2025 RP Media Services. All rights reserved</span>
+          </div>
+        </div>
+      </footer>
+    </>
+  );
+};
+
+export default ConfirmationPage;

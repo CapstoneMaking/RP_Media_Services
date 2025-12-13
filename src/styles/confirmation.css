@@ -1,0 +1,924 @@
+/*confirmation.css - WITH PRICES FIXED */
+/* Reset and Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+.confirmation-header {
+  background-image: url('/public/assets/bgHomepage3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: rgb(255, 255, 255);
+  font-size: 8rem;
+  font-weight: 900;
+  padding: 2%;
+  text-align: center;
+  margin-bottom: 5rem;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.confirmation-container {
+  width: 100%;
+  padding: 2rem;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.confirmation-wrapper {
+  background: white;
+  padding: 3rem;
+  margin-top: -80px;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  text-align: left;
+  width: 100%;
+  max-width: 1200px;
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.confirmation-wrapper h2 {
+  margin-bottom: 1.5rem;
+  color: #007bff;
+  font-size: 2rem;
+  text-align: center;
+}
+
+/* Summary Cards Layout - VERTICAL STACKING */
+.summary-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+/* Schedule Card - Normal size */
+.summary-card.schedule-card {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 100%;
+}
+
+/* Rental Items Card - SMALLER */
+.summary-card.items-card {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 100%;
+  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-card.total-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #007bff;
+  margin-top: 1rem;
+}
+
+.card-header {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Smaller header for items card */
+.items-card .card-header {
+  padding: 1rem 1.5rem;
+}
+
+.items-card .card-header h3 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Smaller body for items card */
+.items-card .card-body {
+  padding: 1rem 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+/* Compact Schedule Info */
+.schedule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 1rem;
+}
+
+.info-value {
+  color: #333;
+  font-weight: 500;
+}
+
+/* COMPACT Items Table - SMALLER */
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem; /* Slightly larger for better readability */
+  margin-top: 0;
+}
+
+.items-table th {
+  background: #f8f9fa;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.items-table td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid #eee;
+  line-height: 1.3;
+  vertical-align: middle;
+}
+
+/* Make sure all table cells are visible */
+.items-table th:nth-child(1),
+.items-table td:nth-child(1) {
+  width: 40%; /* Item name */
+  min-width: 120px;
+}
+
+.items-table th:nth-child(2),
+.items-table td:nth-child(2) {
+  width: 15%; /* Quantity */
+  min-width: 60px;
+  text-align: center;
+}
+
+.items-table th:nth-child(3),
+.items-table td:nth-child(3) {
+  width: 22%; /* Price */
+  min-width: 100px;
+  text-align: right;
+}
+
+.items-table th:nth-child(4),
+.items-table td:nth-child(4) {
+  width: 23%; /* Subtotal */
+  min-width: 100px;
+  text-align: right;
+}
+
+/* Currency styling */
+.items-table .currency {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #333;
+}
+
+.items-table tr:last-child td {
+  border-bottom: none;
+}
+
+.items-count {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+  font-weight: 600;
+  color: #555;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+/* Compact Package Details */
+.package-details h4 {
+  margin: 0 0 0.25rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.package-description {
+  color: #666;
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+/* Cost Breakdown */
+.cost-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cost-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.cost-line.reservation-fee {
+  background: #fff3cd;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
+  margin: 0.5rem 0;
+}
+
+.cost-line.remaining-balance {
+  background: #e7f3ff;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border-left: 4px solid #007bff;
+  margin: 0.5rem 0;
+}
+
+.cost-line.total {
+  border-top: 2px solid #007bff;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.highlight-amount {
+  color: #dc3545;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.payment-note {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #e9f7fe;
+  border-radius: 4px;
+  border-left: 4px solid #17a2b8;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.payment-note strong {
+  color: #333;
+}
+
+/* Form Styles */
+.confirmForm {
+  width: 100%;
+}
+
+.confirmForm h3 {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.confirmForm label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-size: 1rem;
+}
+
+.form-input,
+.confirmForm select,
+.confirmForm input {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #fff;
+}
+
+.form-input:focus,
+.confirmForm input:focus,
+.confirmForm select:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* User Info Display */
+.user-info-display-section {
+  margin-bottom: 2.5rem;
+}
+
+.user-info-line {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.user-info-label {
+  font-weight: 600;
+  color: #333;
+  min-width: 150px;
+  margin-right: 1rem;
+  font-size: 1rem;
+}
+
+.user-info-value-display {
+  flex: 1;
+  color: #555;
+  font-size: 1rem;
+}
+
+.user-info-value-display .auto-fill-note {
+  margin-left: 8px;
+  color: #4CAF50;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.user-info-value-display .missing-note {
+  margin-left: 8px;
+  color: #ff6b6b;
+  font-size: 0.8rem;
+}
+
+/* Agreement Section */
+.agreement-section {
+  margin: 2.5rem 0;
+  text-align: left;
+}
+
+.agreement-section h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  line-height: 1.5;
+  font-size: 1rem;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  transition: background 0.3s ease;
+}
+
+.checkbox-label:hover {
+  background: #f0f0f0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.policy-link {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  transition: color 0.3s ease;
+}
+
+.policy-link:hover {
+  color: #0056b3;
+  text-decoration: none;
+}
+
+/* Main Button */
+.confirmbtn {
+  padding: 1.25rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.confirmbtn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.confirmbtn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.empty-state p {
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+/* Modal Styles */
+.policy-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.policy-modal-content {
+  background-color: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.close-modal {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+  color: #000;
+  text-decoration: none;
+}
+
+#policyContent {
+  margin-top: 20px;
+}
+
+#policyContent h1 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+#policyContent h2 {
+  color: #555;
+  font-size: 18px;
+  margin: 25px 0 10px 0;
+}
+
+#policyContent p {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+#policyContent ul {
+  color: #666;
+  margin: 10px 0 20px 20px;
+}
+
+#policyContent li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+#policyContent strong {
+  color: #333;
+}
+
+/* Payment Modal Specific */
+.payment-modal-content {
+  max-width: 500px;
+}
+
+.payment-content {
+  padding: 2rem;
+}
+
+.payment-summary {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border: 1px solid #e9ecef;
+}
+
+.payment-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.payment-amount {
+  font-weight: bold;
+  color: #333;
+}
+
+.payment-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #ddd;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.payment-total-amount {
+  color: #0070ba;
+  font-size: 1.5rem;
+}
+
+.paypal-container {
+  margin: 30px 0;
+  min-height: 100px;
+  position: relative;
+}
+
+.loading-payment {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.spinner-small {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+
+.payment-success {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.success-icon {
+  font-size: 60px;
+  color: #28a745;
+  margin-bottom: 20px;
+}
+
+/* Verification Modal */
+.verification-content h2 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.verification-content p {
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.verification-steps {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+}
+
+.verification-steps h4 {
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.verification-steps ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.verification-steps li {
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+.verification-actions {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.verification-note {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Error/Success Messages */
+.error-message {
+  background: #fee;
+  color: #c00;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+  border-left: 4px solid #c00;
+  text-align: left;
+}
+
+.success-message {
+  background: #efe;
+  color: #080;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+  border-left: 4px solid #080;
+  text-align: left;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+/* Tablet */
+@media (max-width: 1024px) {
+  .confirmation-header {
+    font-size: 5rem;
+  }
+  
+  .confirmation-wrapper {
+    padding: 2rem;
+    max-width: 95%;
+  }
+  
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .user-info-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-info-label {
+    min-width: auto;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Make items card more compact on tablet */
+  .items-card .card-body {
+    max-height: 200px;
+  }
+  
+  .items-table {
+    font-size: 0.85rem;
+  }
+  
+  .items-table th,
+  .items-table td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .confirmation-header {
+    font-size: 3.5rem;
+    min-height: 200px;
+    margin-bottom: 3rem;
+  }
+  
+  .confirmation-wrapper {
+    padding: 1.5rem;
+    margin-top: -50px;
+  }
+  
+  .confirmation-wrapper h2 {
+    font-size: 1.6rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Make items card even more compact on mobile */
+  .items-card {
+    max-height: 300px;
+  }
+  
+  .items-card .card-body {
+    max-height: 180px;
+    padding: 0.75rem 1rem;
+  }
+  
+  .items-table {
+    font-size: 0.8rem;
+  }
+  
+  .items-table th,
+  .items-table td {
+    padding: 0.4rem 0.2rem;
+  }
+  
+  .policy-modal-content {
+    padding: 1.5rem;
+  }
+  
+  .payment-content {
+    padding: 1rem;
+  }
+  
+  .verification-actions {
+    flex-direction: column;
+  }
+}
+
+/* Small Mobile - Show all columns but make them very compact */
+@media (max-width: 480px) {
+  .confirmation-header {
+    font-size: 2.5rem;
+  }
+  
+  .confirmation-wrapper {
+    padding: 1rem;
+    margin-top: -30px;
+  }
+  
+  /* Ultra-compact items card for small mobile */
+  .items-card {
+    max-height: 250px;
+  }
+  
+  .items-card .card-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .items-card .card-body {
+    max-height: 150px;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .items-table {
+    font-size: 0.75rem;
+  }
+  
+  .items-table th,
+  .items-table td {
+    padding: 0.3rem 0.15rem;
+  }
+  
+  /* Don't hide any columns - show all with very small text */
+  .items-table th:nth-child(3),
+  .items-table td:nth-child(3),
+  .items-table th:nth-child(4),
+  .items-table td:nth-child(4) {
+    display: table-cell; /* Show price and subtotal columns */
+  }
+  
+  .checkbox-label {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Extra Large Screens */
+@media (min-width: 1600px) {
+  .confirmation-wrapper {
+    max-width: 1400px;
+    padding: 4rem;
+  }
+  
+  .confirmation-header {
+    font-size: 10rem;
+    min-height: 400px;
+  }
+}
