@@ -599,7 +599,7 @@ const UserBookingPanel = () => {
                             <div style={{ marginTop: '1rem' }}>
                               <strong>Payment History:</strong>
                               {booking.paymentDetails.paymentHistory.map((payment, index) => (
-                                <div key={index} style={{ fontSize: '0.75rem', padding: '0.25rem', borderBottom: '1px solid #dee2e6' }}>
+                                <div key={index} style={{ fontSize: '0.75rem', padding: '0.25rem', borderBottom: '1px solid #dee2e6', color: payment.type === 'refund' ? '#dc3545' : '#28a745'}}>
                                   ₱{payment.amount.toLocaleString()} - {new Date(payment.date).toLocaleDateString()} - {payment.status} 
                                 </div>
                               ))}
