@@ -778,7 +778,9 @@ const ConfirmationPage = () => {
   const dailyRate = selectedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0) ||
     (selectedPackage ? selectedPackage.price : 0);
 
-  const total = dailyRate * rentalDays;
+  // Add additional fee of ₱1,000
+  const additionalFee = 1000;
+  const total = (dailyRate * rentalDays) + additionalFee;
 
   // Reservation fee
   const reservationFee = 1000;
@@ -986,7 +988,7 @@ const ConfirmationPage = () => {
                           </div>
                           <div className="cost-line">
                             <span>Total Rental Amount:</span>
-                            <span>₱{total.toLocaleString()}</span>
+                            <span>₱{(dailyRate * rentalDays).toLocaleString()}</span>
                           </div>
                         </>
                       ) : (
@@ -1001,10 +1003,16 @@ const ConfirmationPage = () => {
                           </div>
                           <div className="cost-line">
                             <span>Total Rental Amount: </span>
-                            <span>₱{total.toLocaleString()}</span>
+                            <span>₱{(dailyRate * rentalDays).toLocaleString()}</span>
                           </div>
                         </>
                       )}
+
+                      {/* Additional Fee */}
+                      <div className="cost-line additional-fee">
+                        <span>Additional Fee: </span>
+                        <span>₱{additionalFee.toLocaleString()}</span>
+                      </div>
 
                       {/* Reservation Fee */}
                       <div className="cost-line reservation-fee">
