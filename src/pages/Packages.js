@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext'; // Add this import
+
 const showMessage = (message, type = 'info') => {
   // Create a simple div for the message
   const messageDiv = document.createElement('div');
@@ -51,15 +52,16 @@ const showMessage = (message, type = 'info') => {
     }
   };
 };
+
 const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [message, setMessage] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false); // Add this
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const navigate = useNavigate();
   
   // Get rental items from context to check availability
   const { rentalItems, isItemAvailable } = useApp();
-  const { user } = useAuth(); // Add this to get user info
+  const { user, isVerified } = useAuth(); // Add this to get user info
 
   const packages = [
     {
@@ -168,7 +170,7 @@ const Packages = () => {
     }, 500);
   };
 
-  // UPDATED: Handle verification before proceeding
+  // UPDATED: Handle verification before proceeding - same as RentItems.js
   const proceedToSchedule = () => {
     if (!selectedPackage) {
       setMessage("Please select a package first.");
@@ -181,17 +183,14 @@ const Packages = () => {
       return;
     }
 
-    // Check if user is logged in
+    // Check if user is logged in - same as RentItems.js
     if (!user) {
       showMessage("Please log in to schedule a package.");
       navigate('/login-register');
       return;
     }
 
-    // Check verification status
-    // Note: You need to adjust this based on your user verification system
-    const isVerified = user.isVerified || user.verified || false;
-    
+    // Check verification status - same as RentItems.js
     if (!isVerified) {
       // Show verification modal
       setShowVerificationModal(true);
@@ -202,10 +201,10 @@ const Packages = () => {
     navigate("/rent-schedule");
   };
 
-  // Verification modal handlers
+  // Verification modal handlers - same as RentItems.js
   const handleStartVerification = () => {
     setShowVerificationModal(false);
-    navigate("/user-dashboard?tab=verification"); // Adjust based on your routes
+    navigate("/user-dashboard"); // Changed to match RentItems.js
   };
 
   const handleCloseVerificationModal = () => {
@@ -344,7 +343,7 @@ const Packages = () => {
         </div>
       </section>
 
-      {/* Verification Required Modal */}
+      {/* Verification Required Modal - same as RentItems.js */}
       <div 
         className="policy-modal" 
         style={{ display: showVerificationModal ? 'flex' : 'none' }}
