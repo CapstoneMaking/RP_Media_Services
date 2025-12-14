@@ -1010,7 +1010,7 @@ const ConfirmationPage = () => {
 
                       {/* Additional Fee */}
                       <div className="cost-line additional-fee">
-                        <span>Additional Fee: </span>
+                        <span>Additional Fee (Caretaker) : </span>
                         <span>₱{additionalFee.toLocaleString()}</span>
                       </div>
 

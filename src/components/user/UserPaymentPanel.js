@@ -46,11 +46,6 @@ const UserPaymentPanel = () => {
       setLoadingPayPal(false);
       renderPayPalButtons();
     };
-    
-    script.onerror = () => {
-      setError('Failed to load payment system. Please check your connection.');
-      setLoadingPayPal(false);
-    };
 
     document.head.appendChild(script);
   };
