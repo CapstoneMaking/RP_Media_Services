@@ -230,7 +230,7 @@ const UserBookingPanel = () => {
     switch (status) {
       case 'payment_completed': return '#28a745'; // Green
       case 'payment_partially_completed': return '#ffc107'; // Yellow
-      case 'no_payment_recorded': return '#dc3545'; // Red
+      case 'no_payment_recorded': return '#6c757d'; // Red
       case 'refunded': return '#17a2b8'; // Teal
       case 'payment_pending': return '#fd7e14'; // Orange
       default: return '#6c757d'; // Gray
@@ -241,7 +241,7 @@ const UserBookingPanel = () => {
     switch (status) {
       case 'payment_completed': return 'Payment Completed';
       case 'payment_partially_completed': return 'Payment Partially Completed';
-      case 'no_payment_recorded': return 'No Payment Recorded';
+      case 'no_payment_recorded': return 'reservation paid';
       case 'refunded': return 'Refunded';
       case 'payment_pending': return 'Payment Pending';
       default: return status ? status.replace(/_/g, ' ').toUpperCase() : 'Payment Status Unknown';
