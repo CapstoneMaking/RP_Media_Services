@@ -562,14 +562,6 @@ const ConfirmationPage = () => {
         <li>Full payment of the remaining balance must be received and cleared at least forty-eight (48) hours prior to equipment release.</li>
         <li>The rental fee includes the Equipment Caretaker's professional services during standard operating hours (8:00 AM to 6:00 PM).</li>
       </ul>
-      
-      <h2>3.3. ADDITIONAL CHARGES AND FEES</h2>
-      <ul>
-        <li>Overtime charges for Caretaker services beyond standard hours: ₱500 per hour, billed in 30-minute increments.</li>
-        <li>Meal allowance for Caretaker during rental period: ₱300 per meal (breakfast, lunch, dinner) for rentals exceeding 5 hours.</li>
-        <li>Transportation reimbursement for Caretaker if event location exceeds 15km from our facility.</li>
-        <li>Late returns will incur a penalty charge of one hundred percent (100%) of the daily rental rate for each day beyond the agreed return date and time.</li>
-      </ul>
     `,
     
     rentalPolicy: `
