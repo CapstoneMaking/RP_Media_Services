@@ -430,7 +430,7 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
               </div>
             </div>
             <div>
-              Note: it's not advisable to not use phone. Use desktop for better performance.
+              Note: Using a desktop is recommended for better performance.
             </div>
           </div>
         </div>
