@@ -687,7 +687,7 @@ const UserBookingPanel = () => {
                                     <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>
                                       {image.fileName}
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                                    <div style={{ marginTop: '0.5rem' }}>
                                       <a 
                                         href={image.secure_url} 
                                         target="_blank" 
@@ -699,7 +699,7 @@ const UserBookingPanel = () => {
                                       </a>
                                       <button
                                         onClick={() => deleteBookingImage(booking.id, index)}
-                                        className="btn btn-sm btn-outline-danger"
+                                        className="btn btn-sm btn-outline-primary"
                                         style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                                       >
                                         Delete
