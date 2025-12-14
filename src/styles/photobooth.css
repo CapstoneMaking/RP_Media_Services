@@ -149,31 +149,28 @@
   }
 }
 
-/* LANDSCAPE OPTIMIZATION FOR MOBILE */
-@media (max-width: 768px) and (orientation: landscape) {
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
   .photobooth-header {
-    padding: 20px 10px;
-    margin-bottom: 10px;
+    padding: 30px 20px;
   }
   
   .title {
-    font-size: clamp(1.5rem, 4vw, 2rem);
-    margin-bottom: 8px;
-    padding: 5px 0;
-  }
-  
-  .photo-counter {
-    padding: 4px 12px;
-    font-size: 0.8rem;
+    font-size: 4rem;
   }
 }
 
-/* Camera Container - LANDSCAPE OPTIMIZATION */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .photobooth-header {
+    background-size: cover;
+  }
+}
+
+/* Camera Container - UPDATED FOR LANDSCAPE PHONES */
 .camera-container {
   display: grid;
   grid-template-columns: 1fr 400px;
   gap: 30px;
-  align-items: center;
+  align-items: start;
   margin-bottom: 40px;
   max-width: 1280px;
   margin-left: auto;
@@ -183,7 +180,35 @@
   box-sizing: border-box;
 }
 
-@media (max-width: 1024px) {
+/* Desktop/Large Screins */
+@media (min-width: 1025px) {
+  .camera-container {
+    grid-template-columns: 1fr 400px;
+  }
+}
+
+/* Landscape Phone Layout */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .camera-container {
+    grid-template-columns: 1fr 350px;
+    gap: 20px;
+    max-width: 100%;
+    padding: 0 15px;
+    align-items: start;
+  }
+  
+  .video-area {
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  .video-wrapper {
+    padding-bottom: 70%; /* Slightly taller aspect ratio for landscape */
+  }
+}
+
+/* Portrait Tablet */
+@media (max-width: 1024px) and (orientation: portrait) {
   .camera-container {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -191,42 +216,64 @@
   }
 }
 
+/* Portrait Phone */
 @media (max-width: 768px) and (orientation: portrait) {
   .camera-container {
-    padding: 0 15px;
+    grid-template-columns: 1fr;
     gap: 15px;
+    padding: 0 15px;
+  }
+  
+  .video-area {
+    max-width: 100%;
   }
 }
 
-/* LANDSCAPE OPTIMIZATION - Camera Container */
+/* Small Landscape Phones */
 @media (max-width: 768px) and (orientation: landscape) {
   .camera-container {
     grid-template-columns: 1fr 300px;
     gap: 15px;
     padding: 0 10px;
-    margin-bottom: 20px;
-    max-width: 100%;
-    align-items: stretch;
-  }
-  
-  .video-area {
-    max-height: 70vh;
   }
   
   .video-wrapper {
-    padding-bottom: 56.25%; /* 16:9 aspect ratio for landscape */
-  }
-}
-
-/* For very small landscape screens */
-@media (max-width: 568px) and (orientation: landscape) {
-  .camera-container {
-    grid-template-columns: 1fr 250px;
-    gap: 10px;
+    padding-bottom: 75%; /* Adjust for smaller screens */
   }
   
   .controls-section {
-    padding: 15px;
+    padding: 20px 15px;
+  }
+}
+
+/* Extra Small Landscape Phones */
+@media (max-width: 480px) and (orientation: landscape) {
+  .camera-container {
+    grid-template-columns: 1fr 280px;
+    gap: 12px;
+    padding: 0 8px;
+  }
+  
+  .video-area {
+    border-radius: 10px;
+  }
+  
+  .controls-section {
+    padding: 15px 12px;
+    border-radius: 12px;
+  }
+  
+  .capture-btn,
+  .upload-btn,
+  .reset-btn,
+  .frame-option {
+    padding: 10px 12px;
+    font-size: 0.85em;
+  }
+  
+  .frames-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 
@@ -297,177 +344,7 @@
   opacity: 0.8;
 }
 
-/* Controls Section */
-.controls-section {
-  background: white;
-  padding: 30px;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-@media (max-width: 768px) and (orientation: portrait) {
-  .controls-section {
-    padding: 20px;
-  }
-}
-
-/* LANDSCAPE OPTIMIZATION - Controls */
-@media (max-width: 768px) and (orientation: landscape) {
-  .controls-section {
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    max-height: 70vh;
-    overflow-y: auto;
-  }
-  
-  .capture-buttons {
-    gap: 10px;
-    margin-bottom: 15px;
-  }
-  
-  .upload-section,
-  .frames-section {
-    margin-bottom: 15px;
-  }
-}
-
-.capture-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 25px;
-}
-
-@media (max-width: 480px) and (orientation: portrait) {
-  .capture-buttons {
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-}
-
-.capture-btn {
-  padding: 15px 25px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-@media (max-width: 768px) and (orientation: portrait) {
-  .capture-btn {
-    padding: 14px 20px;
-    font-size: 1em;
-  }
-}
-
-/* LANDSCAPE OPTIMIZATION - Buttons */
-@media (max-width: 768px) and (orientation: landscape) {
-  .capture-btn {
-    padding: 10px 15px;
-    font-size: 0.9em;
-    min-height: 44px;
-  }
-  
-  .upload-btn,
-  .reset-btn {
-    padding: 10px 15px;
-    font-size: 0.9em;
-    min-height: 44px;
-  }
-  
-  .frame-option {
-    padding: 8px 12px;
-    font-size: 0.85em;
-    min-height: 44px;
-  }
-}
-
-.capture-btn.primary {
-  background: #000000;
-  color: rgb(255, 255, 255);
-}
-
-.capture-btn.primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.capture-btn.secondary {
-  background: #ffffff;
-  color: #333;
-  border: 2px solid #000000;
-}
-
-.capture-btn.secondary:hover:not(:disabled) {
-  background: #000000;
-  color: white;
-  transform: translateY(-2px);
-}
-
-.capture-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-/* Upload Section */
-.upload-section {
-  margin-bottom: 25px;
-}
-
-@media (max-width: 480px) and (orientation: portrait) {
-  .upload-section {
-    margin-bottom: 20px;
-  }
-}
-
-.upload-btn {
-  display: block;
-  width: 100%;
-  padding: 12px 20px;
-  background: #28a745;
-  color: white;
-  text-align: center;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  border: none;
-  font-size: 1em;
-}
-
-@media (max-width: 768px) and (orientation: portrait) {
-  .upload-btn {
-    padding: 14px 20px;
-  }
-}
-
-@media (max-width: 480px) and (orientation: portrait) {
-  .upload-btn {
-    padding: 12px 16px;
-    font-size: 0.95em;
-  }
-}
-
-.upload-btn:hover:not(.disabled) {
-  background: #218838;
-  transform: translateY(-2px);
-}
-
-.upload-btn.disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* Enhanced Controls Section */
+/* Controls Section - UPDATED FOR COMPACT LANDSCAPE */
 .controls-section {
   background: white;
   padding: 35px;
@@ -475,6 +352,32 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.12);
   width: 100%;
   border: 1px solid #eaeaea;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+@media (max-width: 1024px) and (orientation: landscape) {
+  .controls-section {
+    padding: 25px;
+    max-height: 500px;
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .controls-section {
+    padding: 20px;
+    max-height: 450px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .controls-section {
+    padding: 15px;
+    border-radius: 15px;
+    max-height: 400px;
+  }
 }
 
 @media (max-width: 768px) and (orientation: portrait) {
@@ -497,10 +400,17 @@
   margin-bottom: 30px;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .capture-buttons {
     gap: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .capture-buttons {
+    gap: 10px;
+    margin-bottom: 15px;
   }
 }
 
@@ -516,18 +426,26 @@
   letter-spacing: 0.5px;
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 1024px) and (orientation: landscape) {
   .capture-btn {
-    padding: 16px 25px;
+    padding: 16px 20px;
     font-size: 1.1em;
   }
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .capture-btn {
-    padding: 14px 20px;
+    padding: 14px 18px;
     font-size: 1em;
     border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .capture-btn {
+    padding: 10px 14px;
+    font-size: 0.9em;
+    border-radius: 8px;
   }
 }
 
@@ -550,7 +468,7 @@
   font-weight: 600;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .capture-btn.secondary {
     border-width: 2px;
   }
@@ -575,9 +493,15 @@
   margin-bottom: 30px;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .upload-section {
-    margin-bottom: 25px;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .upload-section {
+    margin-bottom: 15px;
   }
 }
 
@@ -597,18 +521,26 @@
   box-shadow: 0 6px 20px rgba(40, 167, 69, 0.25);
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 1024px) and (orientation: landscape) {
   .upload-btn {
-    padding: 15px 20px;
+    padding: 14px 20px;
     font-size: 1em;
   }
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .upload-btn {
-    padding: 14px 18px;
+    padding: 12px 18px;
     font-size: 0.95em;
     border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .upload-btn {
+    padding: 10px 14px;
+    font-size: 0.9em;
+    border-radius: 8px;
   }
 }
 
@@ -636,32 +568,19 @@
   padding-bottom: 15px;
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
-  .frames-section h3 {
-    font-size: 1.3em;
-    margin-bottom: 20px;
-  }
-}
-
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .frames-section h3 {
     font-size: 1.2em;
     margin-bottom: 15px;
-    padding-bottom: 12px;
+    padding-bottom: 10px;
   }
 }
 
-/* LANDSCAPE OPTIMIZATION - Frames Section */
-@media (max-width: 768px) and (orientation: landscape) {
+@media (max-width: 480px) and (orientation: landscape) {
   .frames-section h3 {
     font-size: 1.1em;
     margin-bottom: 12px;
     padding-bottom: 8px;
-  }
-  
-  .frames-section h3::after {
-    width: 50px;
-    height: 3px;
   }
 }
 
@@ -677,10 +596,17 @@
   border-radius: 2px;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .frames-section h3::after {
     width: 60px;
     height: 3px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .frames-section h3::after {
+    width: 50px;
+    height: 2px;
   }
 }
 
@@ -691,10 +617,18 @@
   margin-bottom: 30px;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .frames-grid {
-    gap: 12px;
-    margin-bottom: 25px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .frames-grid {
+    gap: 8px;
+    margin-bottom: 15px;
   }
 }
 
@@ -714,19 +648,20 @@
   overflow: hidden;
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
-  .frame-option {
-    padding: 14px 18px;
-    font-size: 0.95em;
-  }
-}
-
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .frame-option {
     padding: 12px 15px;
     font-size: 0.9em;
     border-radius: 10px;
     border-width: 1.5px;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .frame-option {
+    padding: 10px 12px;
+    font-size: 0.85em;
+    border-radius: 8px;
   }
 }
 
@@ -785,19 +720,21 @@
   box-shadow: 0 6px 20px rgba(220, 53, 69, 0.25);
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 768px) and (orientation: landscape) {
   .reset-btn {
-    padding: 15px 20px;
+    padding: 14px 18px;
     font-size: 1em;
+    border-radius: 10px;
+    margin-bottom: 15px;
   }
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) and (orientation: landscape) {
   .reset-btn {
-    padding: 14px 18px;
-    font-size: 0.95em;
-    border-radius: 10px;
-    margin-bottom: 15px;
+    padding: 10px 14px;
+    font-size: 0.9em;
+    border-radius: 8px;
+    margin-bottom: 12px;
   }
 }
 
@@ -825,14 +762,14 @@
   margin-top: 10px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 480px) and (orientation: landscape) {
   .debug-info {
-    padding: 12px;
+    padding: 10px;
     font-size: 0.8em;
   }
 }
 
-/* Gallery Section - LANDSCAPE OPTIMIZATION */
+/* Gallery Section */
 .gallery {
   margin: 5% 10%;
   padding: 0;
@@ -847,31 +784,14 @@
   }
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 768px) {
   .gallery {
     margin: 5%;
     width: calc(100% - 10%);
   }
 }
 
-/* LANDSCAPE OPTIMIZATION - Gallery */
-@media (max-width: 768px) and (orientation: landscape) {
-  .gallery {
-    margin: 3% 5%;
-    width: calc(100% - 10%);
-  }
-  
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
-  }
-  
-  .photo-card img {
-    height: 150px;
-  }
-}
-
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) {
   .gallery {
     margin: 20px 15px;
     width: calc(100% - 30px);
@@ -887,31 +807,12 @@
   gap: 15px;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) {
   .gallery-header {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
     margin-bottom: 20px;
-  }
-}
-
-/* LANDSCAPE OPTIMIZATION - Gallery Header */
-@media (max-width: 768px) and (orientation: landscape) {
-  .gallery-header {
-    flex-direction: row;
-    align-items: center;
-    margin-bottom: 15px;
-    gap: 10px;
-  }
-  
-  .gallery-header h2 {
-    font-size: 1.3rem;
-  }
-  
-  .refresh-btn {
-    padding: 6px 12px;
-    font-size: 0.85em;
   }
 }
 
@@ -933,7 +834,7 @@
   font-size: 0.95em;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) {
   .refresh-btn {
     width: 100%;
     padding: 10px;
@@ -960,14 +861,14 @@
   }
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 768px) {
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 15px;
   }
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) {
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
@@ -998,13 +899,13 @@
   object-fit: cover;
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 768px) {
   .photo-card img {
     height: 180px;
   }
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) {
   .photo-card img {
     height: 150px;
   }
@@ -1092,7 +993,7 @@
   font-size: 0.95em;
 }
 
-@media (max-width: 480px) and (orientation: portrait) {
+@media (max-width: 480px) {
   .clear-btn {
     padding: 12px 24px;
     width: 100%;
@@ -1174,7 +1075,7 @@ canvas {
 }
 
 /* Additional responsive utilities */
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 768px) {
   .gallery-header {
     flex-direction: column;
     align-items: center;
@@ -1199,20 +1100,6 @@ canvas {
   }
 }
 
-/* LANDSCAPE OPTIMIZATION - Touch targets */
-@media (max-width: 768px) and (orientation: landscape) {
-  .frame-option {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .capture-btn, .upload-btn, .reset-btn {
-    min-height: 44px;
-  }
-}
-
 /* Ensure proper touch targets on mobile */
 @media (hover: none) and (pointer: coarse) {
   .capture-btn, .upload-btn, .reset-btn, .frame-option, .photo-actions button {
@@ -1221,5 +1108,34 @@ canvas {
   
   .gallery-header button {
     min-height: 44px;
+  }
+}
+
+/* Landscape-specific optimizations */
+@media (orientation: landscape) and (max-height: 600px) {
+  .photobooth-header {
+    padding: 20px 15px;
+    margin-bottom: 15px;
+  }
+  
+  .title {
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin-bottom: 10px;
+  }
+  
+  .camera-container {
+    gap: 15px;
+  }
+  
+  .controls-section {
+    max-height: 380px;
+  }
+}
+
+/* High DPI Screens */
+@media (-webkit-min-device-pixel-ratio: 2) and (orientation: landscape),
+       (min-resolution: 192dpi) and (orientation: landscape) {
+  .photobooth-header {
+    background-size: cover;
   }
 }

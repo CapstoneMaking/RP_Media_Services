@@ -429,14 +429,9 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
                 ))}
               </div>
             </div>
-
-            <button 
-              className="reset-btn" 
-              onClick={handleResetAll}
-              disabled={isCapturing || isUploading}
-            >
-              Reset All
-            </button>
+            <div>
+              Note: it's not advisable to not use phone. Use desktop for better performance.
+            </div>
           </div>
         </div>
 
