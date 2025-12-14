@@ -1,4 +1,4 @@
-// information.js - UPDATED WITH APPCONTEXT INTEGRATION
+// information.js - UPDATED WITH APPCONTEXT INTEGRATION AND VERIFICATION FIX
 import React, { useCallback, useEffect, useState, useRef } from 'react'; // ADD useRef
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +64,7 @@ const Information = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  const { user } = useAuth();
+  const { user, isVerified } = useAuth(); // UPDATED: Get isVerified from AuthContext
   const { 
     getAllRentalItems,
     getAvailableForRent,
@@ -653,7 +653,7 @@ const Information = () => {
     };
   }, [isItemAvailable]);
 
-  // CHANGED: Direct proceed to schedule function for ℹ icon view
+  // UPDATED: Direct proceed to schedule function for ℹ icon view
   const handleProceedToSchedule = () => {
     const allProducts = allProductsRef.current;
     const pkg = allProducts[activePackage]?.packageData;
@@ -667,7 +667,7 @@ const Information = () => {
       return;
     }
 
-    // Check if user is logged in
+    // Check if user is logged in - same as RentItems.js
     if (!user) {
       showMessage("Please log in to schedule a package.");
       navigate('/login-register');
@@ -678,9 +678,7 @@ const Information = () => {
     localStorage.setItem("selectedPackage", JSON.stringify(pkg));
     localStorage.removeItem("selectedItems"); // Clear any individual items
 
-    // Check verification status
-    const isVerified = user.isVerified || user.verified || false;
-    
+    // Check verification status - UPDATED: Use isVerified from AuthContext
     if (!isVerified) {
       // Show verification modal
       setShowVerificationModal(true);
@@ -691,10 +689,10 @@ const Information = () => {
     navigate("/rent-schedule");
   };
 
-  // ADDED: Verification modal handlers
+  // UPDATED: Verification modal handlers - same as RentItems.js
   const handleStartVerification = () => {
     setShowVerificationModal(false);
-    navigate("/user-dashboard?tab=verification"); // Adjust based on your routes
+    navigate("/user-dashboard"); // Changed to match RentItems.js
   };
 
   const handleCloseVerificationModal = () => {
