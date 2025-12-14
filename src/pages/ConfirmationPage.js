@@ -251,7 +251,7 @@ const ConfirmationPage = () => {
         },
         onError: function (err) {
           console.error('PayPal payment error:', err);
-          setErrorMessage('Payment failed. Please try again or use a different payment method.');
+          setErrorMessage('Payment failed. Please try again.');
           setIsProcessingPayment(false);
         },
         onCancel: function (data) {
