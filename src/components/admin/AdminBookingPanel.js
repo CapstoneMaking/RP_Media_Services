@@ -1232,7 +1232,7 @@ const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
                                       fontSize: '0.75rem',
                                       padding: '0.25rem',
                                       borderBottom: '1px solid #dee2e6',
-                                      color: payment.type === 'refund' ? '#dc3545' : '#28a745'
+                                      color: payment.type === 'refund' ? '#6c757d' : '#6c757d'
                                     }}>
                                       {payment.type === 'refund' ? 'Refund: -₱' : 'Payment: ₱'}{Math.abs(payment.amount).toLocaleString()} - {new Date(payment.date).toLocaleDateString()} - {getPaymentStatusText(payment.status)}
                                     </div>
