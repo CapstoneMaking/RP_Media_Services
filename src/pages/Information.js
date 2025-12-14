@@ -1,27 +1,79 @@
 // information.js - UPDATED WITH APPCONTEXT INTEGRATION
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react'; // ADD useRef
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useApp } from '../context/AppContext'; // FIXED: Changed from AppContext to useApp
+import { useApp } from '../context/AppContext';
+import { firebaseService } from '../services/firebaseService'; // ADD THIS IMPORT
+
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
 
 const Information = () => {
   const [activeProduct, setActiveProduct] = useState('');
   const [activePackage, setActivePackage] = useState('');
-  const [inventoryProducts, setInventoryProducts] = useState({});
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [productImages, setProductImages] = useState([]);
-  const [packageSelected, setPackageSelected] = useState(false);
-  const [selectedPackageDetails, setSelectedPackageDetails] = useState(null);
-  const [showVerificationModal, setShowVerificationModal] = useState(false); // ADDED: For ID verification
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // ADD loading state
   const location = useLocation();
   const navigate = useNavigate();
   
   const { user } = useAuth();
   const { 
-    getAllRentalItems,  // Get all items from AppContext
-    getAvailableForRent, // Helper function for available stock
-    isItemAvailable // Add this to check package availability
+    getAllRentalItems,
+    getAvailableForRent,
+    isItemAvailable
   } = useApp();
+
+  // Use refs to store ALL product data from all sources
+  const allProductsRef = useRef({});
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Packages data (same as in packages.js)
   const packages = [
@@ -94,156 +146,41 @@ const Information = () => {
     }
   ];
 
-  // Check package availability (same as in packages.js)
-  const getPackageAvailability = (pkg) => {
-    const unavailableItems = pkg.items.filter(item => 
-      !isItemAvailable(item.id, item.quantity)
-    );
-    return {
-      isAvailable: unavailableItems.length === 0,
-      unavailableItems
-    };
-  };
-
-  // CHANGED: Direct proceed to schedule function for ℹ icon view
-  const handleProceedToSchedule = () => {
-    const pkg = packages.find(p => p.id === activePackage);
-    if (!pkg) return;
-
-    const availability = getPackageAvailability(pkg);
-    
-    if (!availability.isAvailable) {
-      const unavailableNames = availability.unavailableItems.map(item => item.name).join(', ');
-      alert(`Package unavailable. Following items are out of stock: ${unavailableNames}`);
-      return;
-    }
-
-    // Check if user is logged in
-    if (!user) {
-      alert("Please log in to schedule a package.");
-      navigate('/login-register');
-      return;
-    }
-
-    // Save package to localStorage
-    localStorage.setItem("selectedPackage", JSON.stringify(pkg));
-    localStorage.removeItem("selectedItems"); // Clear any individual items
-
-    // Check verification status
-    const isVerified = user.isVerified || user.verified || false;
-    
-    if (!isVerified) {
-      // Show verification modal
-      setShowVerificationModal(true);
-      return;
-    }
-
-    // If verified, proceed to schedule
-    navigate("/rent-schedule");
-  };
-
-  // ADDED: Verification modal handlers
-  const handleStartVerification = () => {
-    setShowVerificationModal(false);
-    navigate("/user-dashboard?tab=verification"); // Adjust based on your routes
-  };
-
-  const handleCloseVerificationModal = () => {
-    setShowVerificationModal(false);
-  };
-
   // ==============================================
-  // FIX 1: Get real-time product data from AppContext
+  // NEW FUNCTION: Load ALL products from ALL sources
   // ==============================================
-  const getCurrentProductData = useCallback(() => {
-    if (!activeProduct && !activePackage) return null;
-    
-    const itemId = activeProduct || activePackage;
-    console.log('🔍 Getting product data for:', itemId);
-    
-    // Get all items from AppContext
-    const allItems = getAllRentalItems ? getAllRentalItems() : [];
-    const realTimeProduct = allItems.find(item => item.id === itemId);
-    
-    if (realTimeProduct) {
-      console.log('✅ Found real-time product in AppContext:', {
-        name: realTimeProduct.name,
-        price: realTimeProduct.price,
-        available: realTimeProduct.availableQuantity,
-        reserved: realTimeProduct.reservedQuantity
-      });
-    } else {
-      console.log('ℹ️ No real-time data in AppContext for:', itemId);
-    }
-    
-    return realTimeProduct;
-  }, [activeProduct, activePackage, getAllRentalItems]);
-
-  // Load inventory products from localStorage
   useEffect(() => {
-    const savedProductInfo = localStorage.getItem('productInfo');
-    if (savedProductInfo) {
-      setInventoryProducts(JSON.parse(savedProductInfo));
-    }
-
-    // Check if there's already a selected package for this active package
-    const savedPackage = localStorage.getItem("selectedPackage");
-    if (savedPackage && activePackage) {
+    const loadAllProducts = async () => {
+      setIsLoading(true);
+      console.log('🚀 Loading products from ALL sources...');
+      
       try {
-        const pkg = JSON.parse(savedPackage);
-        if (pkg.id === activePackage) {
-          setSelectedPackageDetails(pkg);
-          setPackageSelected(true);
+        // 1. Load from system/rentalInventory (predefined items)
+        const rentalResult = await firebaseService.getRentalItems();
+        const predefinedItems = rentalResult.success ? rentalResult.rentalItems : [];
+        
+        console.log('✅ Loaded from system/rentalInventory:', predefinedItems.length, 'predefined items');
+        
+        // 2. Load from inventory/currentInventory (user-added items)
+        const inventoryResult = await firebaseService.getInventoryItems();
+        const userAddedItems = inventoryResult.success ? inventoryResult.inventoryItems : [];
+        
+        console.log('✅ Loaded from inventory/currentInventory:', userAddedItems.length, 'user-added items');
+        
+        // 3. Load productInfo from localStorage
+        let productInfoFromStorage = {};
+        try {
+          const savedProductInfo = localStorage.getItem('productInfo');
+          if (savedProductInfo) {
+            productInfoFromStorage = JSON.parse(savedProductInfo);
+            console.log('✅ Loaded productInfo from localStorage:', Object.keys(productInfoFromStorage).length, 'items');
+          }
+        } catch (error) {
+          console.error('Error loading productInfo:', error);
         }
-      } catch (error) {
-        console.error('Error parsing saved package:', error);
-      }
-    }
-  }, [activePackage]);
-
-  const showSidebar = () => {
-    const sidebar = document.querySelector('.sidebar');
-    sidebar.style.display = 'flex';
-  };
-
-  const hideSidebar = () => {
-    const sidebar = document.querySelector('.sidebar');
-    sidebar.style.display = 'none';
-  };
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const itemId = params.get("item");
-    const packageId = params.get("package");
-    
-    if (itemId) {
-      setActiveProduct(itemId);
-      setActivePackage('');
-      setPackageSelected(false);
-      setSelectedPackageDetails(null);
-      setCurrentImageIndex(0);
-      const section = document.getElementById(itemId);
-      if (section) {
-        section.style.display = "block";
-        section.scrollIntoView({ behavior: "smooth" });
-      }
-    } else if (packageId) {
-      setActivePackage(packageId);
-      setActiveProduct('');
-      setCurrentImageIndex(0);
-      const section = document.getElementById(packageId);
-      if (section) {
-        section.style.display = "block";
-        section.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  }, [location, inventoryProducts]);
-
-  // ==============================================
-  // FIX 2: Combine predefined data with AppContext data
-  // ==============================================
-  const getProductInfo = useCallback(() => {
-    const predefinedProductInfo = {
+        
+        // 4. Get predefined product info (from your existing code)
+        const predefinedProductInfo = {
       // Individual Products - ONLY DESCRIPTIVE DATA (no prices/stock)
       "sachtler-tripod": {
         title: "Sachtler Video 20 S1 100mm Ball Head Tripod System",
@@ -581,74 +518,383 @@ const Information = () => {
         category: "camera-dolly"
       }
     };
-
-    // Merge with inventory products
-    const mergedProductInfo = { ...predefinedProductInfo };
-    
-    Object.keys(inventoryProducts).forEach(key => {
-      if (!predefinedProductInfo[key]) {
-        mergedProductInfo[key] = inventoryProducts[key];
+        
+        // Combine ALL items into one object
+        const allItems = {};
+        
+        // Add predefined items first (mark them as predefined)
+        predefinedItems.forEach(item => {
+          if (item.id) {
+            allItems[item.id] = {
+              ...item,
+              isPredefined: true,
+              source: 'system/rentalInventory'
+            };
+          }
+        });
+        
+        // Add user-added items from Firebase (override predefined if same ID)
+        userAddedItems.forEach(item => {
+          if (item.id) {
+            allItems[item.id] = {
+              ...item,
+              isPredefined: false,
+              source: 'inventory/currentInventory'
+            };
+          }
+        });
+        
+        // Merge with productInfo from localStorage for descriptions and specifications
+        Object.keys(productInfoFromStorage).forEach(itemId => {
+          if (allItems[itemId]) {
+            // Merge productInfo data with item data
+            allItems[itemId] = {
+              ...allItems[itemId],
+              title: productInfoFromStorage[itemId].title || allItems[itemId].name,
+              description: productInfoFromStorage[itemId].description || allItems[itemId].description,
+              image: productInfoFromStorage[itemId].image || allItems[itemId].image,
+              specifications: productInfoFromStorage[itemId].specifications || allItems[itemId].specifications || [],
+              category: productInfoFromStorage[itemId].category || allItems[itemId].category
+            };
+          } else {
+            // Item exists in productInfo but not in inventory (shouldn't happen)
+            allItems[itemId] = {
+              id: itemId,
+              ...productInfoFromStorage[itemId],
+              isPredefined: false,
+              source: 'productInfo'
+            };
+          }
+        });
+        
+        // Merge with predefined product info
+        Object.keys(predefinedProductInfo).forEach(itemId => {
+          if (allItems[itemId]) {
+            allItems[itemId] = {
+              ...allItems[itemId],
+              title: predefinedProductInfo[itemId].title || allItems[itemId].title,
+              description: predefinedProductInfo[itemId].description || allItems[itemId].description,
+              image: predefinedProductInfo[itemId].image || allItems[itemId].image,
+              specifications: predefinedProductInfo[itemId].specifications || allItems[itemId].specifications || [],
+              category: predefinedProductInfo[itemId].category || allItems[itemId].category,
+              images: predefinedProductInfo[itemId].images || allItems[itemId].images || []
+            };
+          } else {
+            // Item only exists in predefinedProductInfo
+            allItems[itemId] = {
+              id: itemId,
+              ...predefinedProductInfo[itemId],
+              isPredefined: true,
+              source: 'predefinedProductInfo'
+            };
+          }
+        });
+        
+        // Add packages
+        packages.forEach(pkg => {
+          allItems[pkg.id] = {
+            id: pkg.id,
+            title: pkg.title || pkg.name,
+            description: pkg.description,
+            items: pkg.items.map(item => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity
+            })),
+            displayItems: pkg.displayItems,
+            isPackage: true,
+            packageData: pkg,
+            specifications: pkg.displayItems || [],
+            source: 'packages'
+          };
+        });
+        
+        // Store in ref
+        allProductsRef.current = allItems;
+        
+        console.log('🎉 TOTAL products loaded:', Object.keys(allItems).length, 'items');
+        console.log('📊 Breakdown:');
+        console.log('- Predefined items:', Object.values(allItems).filter(item => item.isPredefined).length);
+        console.log('- User-added items:', Object.values(allItems).filter(item => !item.isPredefined && !item.isPackage).length);
+        console.log('- Packages:', Object.values(allItems).filter(item => item.isPackage).length);
+        
+        setIsLoading(false);
+        setForceUpdate(prev => prev + 1); // Force re-render
+        
+      } catch (error) {
+        console.error('❌ Error loading all products:', error);
+        setIsLoading(false);
       }
-    });
+    };
+    
+    loadAllProducts();
+    
+    // Listen for inventory updates
+    const handleInventoryUpdate = () => {
+      console.log('📢 Received inventory update event, reloading...');
+      loadAllProducts();
+    };
+    
+    window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+    
+    return () => {
+      window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+    };
+  }, []);
 
-    // Add packages to product info
-    packages.forEach(pkg => {
-      mergedProductInfo[pkg.id] = {
-        title: pkg.title || pkg.name,
-        description: pkg.description,
-        items: pkg.items.map(item => ({
-          id: item.id,
-          name: item.name,
-          image: predefinedProductInfo[item.id]?.image || '/assets/items/default.png'
-        })),
-        displayItems: pkg.displayItems,
-        isPackage: true,
-        packageData: pkg
-      };
-    });
+  // Check package availability (same as in packages.js)
+  const getPackageAvailability = useCallback((pkg) => {
+    const unavailableItems = pkg.items.filter(item => 
+      !isItemAvailable(item.id, item.quantity)
+    );
+    return {
+      isAvailable: unavailableItems.length === 0,
+      unavailableItems
+    };
+  }, [isItemAvailable]);
 
-    return mergedProductInfo;
-  }, [inventoryProducts]);
+  // CHANGED: Direct proceed to schedule function for ℹ icon view
+  const handleProceedToSchedule = () => {
+    const allProducts = allProductsRef.current;
+    const pkg = allProducts[activePackage]?.packageData;
+    if (!pkg) return;
+
+    const availability = getPackageAvailability(pkg);
+    
+    if (!availability.isAvailable) {
+      const unavailableNames = availability.unavailableItems.map(item => item.name).join(', ');
+      showMessage(`Package unavailable. Following items are out of stock: ${unavailableNames}`);
+      return;
+    }
+
+    // Check if user is logged in
+    if (!user) {
+      showMessage("Please log in to schedule a package.");
+      navigate('/login-register');
+      return;
+    }
+
+    // Save package to localStorage
+    localStorage.setItem("selectedPackage", JSON.stringify(pkg));
+    localStorage.removeItem("selectedItems"); // Clear any individual items
+
+    // Check verification status
+    const isVerified = user.isVerified || user.verified || false;
+    
+    if (!isVerified) {
+      // Show verification modal
+      setShowVerificationModal(true);
+      return;
+    }
+
+    // If verified, proceed to schedule
+    navigate("/rent-schedule");
+  };
+
+  // ADDED: Verification modal handlers
+  const handleStartVerification = () => {
+    setShowVerificationModal(false);
+    navigate("/user-dashboard?tab=verification"); // Adjust based on your routes
+  };
+
+  const handleCloseVerificationModal = () => {
+    setShowVerificationModal(false);
+  };
 
   // ==============================================
-  // FIX 3: Updated product images useEffect
+  // UPDATED: Get current product with real-time data
   // ==============================================
-  useEffect(() => {
-    if (!activeProduct && !activePackage) return;
+  const getCurrentProductData = useCallback(() => {
+    if (!activeProduct && !activePackage) return null;
     
-    const productInfo = getProductInfo();
-    const currentProduct = activeProduct ? productInfo[activeProduct] : 
-                         activePackage ? productInfo[activePackage] : null;
+    const itemId = activeProduct || activePackage;
+    console.log('🔍 Getting product data for:', itemId);
     
-    if (currentProduct) {
-      if (currentProduct.items) {
-        // For packages
-        const images = currentProduct.items.map(item => ({
-          src: productInfo[item.id]?.image || item.image || '/assets/items/default.png',
-          alt: productInfo[item.id]?.title || item.name
-        }));
-        setProductImages(images);
-      } else if (currentProduct.images && currentProduct.images.length > 0) {
-        // Single products with multiple images
-        const images = currentProduct.images.map(img => ({
-          src: img,
-          alt: currentProduct.title
-        }));
-        setProductImages(images);
-      } else if (currentProduct.image) {
-        // Single product with single image
-        setProductImages([{
-          src: currentProduct.image,
-          alt: currentProduct.title
-        }]);
-      } else {
-        setProductImages([{
-          src: '/assets/items/default.png',
-          alt: currentProduct.title
-        }]);
+    // Get all items from AppContext
+    const allItems = getAllRentalItems ? getAllRentalItems() : [];
+    const realTimeProduct = allItems.find(item => item.id === itemId);
+    
+    if (realTimeProduct) {
+      console.log('✅ Found real-time product in AppContext:', {
+        name: realTimeProduct.name,
+        price: realTimeProduct.price,
+        available: realTimeProduct.availableQuantity,
+        reserved: realTimeProduct.reservedQuantity
+      });
+    } else {
+      console.log('ℹ️ No real-time data in AppContext for:', itemId);
+    }
+    
+    return realTimeProduct;
+  }, [activeProduct, activePackage, getAllRentalItems]);
+
+  // ==============================================
+  // UPDATED: Get current product - checks ALL sources
+  // ==============================================
+  const currentProduct = React.useMemo(() => {
+    const itemId = activeProduct || activePackage;
+    if (!itemId) return null;
+    
+    // Get from our combined products ref
+    const baseProduct = allProductsRef.current[itemId];
+    if (!baseProduct) return null;
+    
+    // For packages
+    if (baseProduct.isPackage) {
+      const pkg = baseProduct.packageData;
+      if (pkg) {
+        const availability = getPackageAvailability(pkg);
+        return {
+          ...baseProduct,
+          price: `₱${pkg.price.toLocaleString()}/day`,
+          isPackage: true,
+          isAvailable: availability.isAvailable,
+          unavailableItems: availability.unavailableItems,
+          packageData: pkg,
+          // CRITICAL: Ensure specifications exist
+          specifications: baseProduct.specifications || pkg.displayItems || []
+        };
       }
     }
-  }, [activeProduct, activePackage, getProductInfo]);
+    
+    // For individual items
+    const realTimeProduct = getCurrentProductData();
+    const combinedProduct = { ...baseProduct };
+    
+    if (realTimeProduct) {
+      combinedProduct.price = realTimeProduct.price ? `₱${realTimeProduct.price.toLocaleString()}/day` : 'Price on request';
+      const stock = getAvailableForRent ? getAvailableForRent(realTimeProduct) : 0;
+      combinedProduct.stock = stock;
+      combinedProduct.available = realTimeProduct.availableQuantity || 0;
+      combinedProduct.reserved = realTimeProduct.reservedQuantity || 0;
+    } else {
+      // Fallback prices
+      const predefinedPrices = {
+        "sachtler-tripod": "₱3,500/day",
+        "cartoni-tripod": "₱3,500/day",
+        "eimage-tripod": "₱2,500/day",
+        "pmw-200": "₱5,000/day",
+        "sony-pmw-350k": "₱7,000/day",
+        "panasonic-hpx3100": "₱8,000/day",
+        "saramonic-comset": "₱3,000/day",
+        "lumantek-switcher": "₱4,000/day",
+        "sony-mcx-500": "₱4,500/day",
+        "blackmagic-atem": "₱4,500/day",
+        "behringer-mixer": "₱1,500/day",
+        "xtuga-mixer": "₱1,200/day",
+        "atem-monitor": "₱2,000/day",
+        "lilliput-monitor": "₱1,800/day",
+        "tvlogic-monitor": "₱2,200/day",
+        "accsoon-transmitter": "₱2,500/day",
+        "hollyland-transmitter": "₱3,000/day",
+        "dolly-platform": "₱5,000/day",
+        "wheels-slider": "₱3,500/day"
+      };
+      combinedProduct.price = predefinedPrices[activeProduct] || 'Price on request';
+    }
+    
+    // CRITICAL: Ensure specifications are always an array
+    if (!combinedProduct.specifications || !Array.isArray(combinedProduct.specifications)) {
+      combinedProduct.specifications = [];
+    }
+    
+    // DEBUG: Log product info
+    console.log('📋 Current Product:', {
+      id: combinedProduct.id,
+      title: combinedProduct.title,
+      source: combinedProduct.source,
+      hasSpecifications: !!combinedProduct.specifications,
+      specificationsCount: combinedProduct.specifications?.length || 0,
+      specifications: combinedProduct.specifications
+    });
+    
+    return combinedProduct;
+  }, [activeProduct, activePackage, getCurrentProductData, getAvailableForRent, getPackageAvailability, forceUpdate]);
+
+  // ==============================================
+  // NEW FUNCTION: Get specifications - GUARANTEED TO WORK
+  // ==============================================
+  const displaySpecifications = React.useMemo(() => {
+    if (!currentProduct) return [];
+    
+    // For packages, use displayItems
+    if (currentProduct.isPackage && currentProduct.displayItems) {
+      return currentProduct.displayItems;
+    }
+    
+    // For individual items, check specifications
+    if (currentProduct.specifications && Array.isArray(currentProduct.specifications)) {
+      return currentProduct.specifications.filter(spec => spec && spec.trim() !== '');
+    }
+    
+    // Last resort: check in allProductsRef
+    const allProducts = allProductsRef.current;
+    const itemId = activeProduct || activePackage;
+    const itemInRef = allProducts[itemId];
+    
+    if (itemInRef && itemInRef.specifications && Array.isArray(itemInRef.specifications)) {
+      return itemInRef.specifications.filter(spec => spec && spec.trim() !== '');
+    }
+    
+    return [];
+  }, [currentProduct, activeProduct, activePackage]);
+
+  // Load URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const itemId = params.get("item");
+    const packageId = params.get("package");
+    
+    if (itemId) {
+      setActiveProduct(itemId);
+      setActivePackage('');
+    } else if (packageId) {
+      setActivePackage(packageId);
+      setActiveProduct('');
+    }
+    
+    setCurrentImageIndex(0);
+  }, [location]);
+
+  // Load product images
+  useEffect(() => {
+    if (!currentProduct) return;
+    
+    const images = [];
+    const allProducts = allProductsRef.current;
+    
+    if (currentProduct.items) {
+      // For packages
+      currentProduct.items.forEach(item => {
+        const fullProduct = allProducts[item.id];
+        images.push({
+          src: fullProduct?.image || item.image || '/assets/items/default.png',
+          alt: fullProduct?.title || item.name
+        });
+      });
+    } else if (currentProduct.images && currentProduct.images.length > 0) {
+      // Single products with multiple images
+      currentProduct.images.forEach(img => {
+        images.push({
+          src: img,
+          alt: currentProduct.title
+        });
+      });
+    } else if (currentProduct.image) {
+      // Single product with single image
+      images.push({
+        src: currentProduct.image,
+        alt: currentProduct.title
+      });
+    } else {
+      images.push({
+        src: '/assets/items/default.png',
+        alt: currentProduct.title
+      });
+    }
+    
+    setProductImages(images);
+  }, [currentProduct]);
 
   // Function to handle clicking on product images within packages
   const handleProductClick = (productId) => {
@@ -668,109 +914,6 @@ const Information = () => {
     );
   };
 
-  // ==============================================
-  // FIX 4: Get combined product data (predefined + AppContext)
-  // ==============================================
-  const currentProduct = React.useMemo(() => {
-    const productInfo = getProductInfo();
-    const baseProduct = activeProduct ? productInfo[activeProduct] : 
-                       activePackage ? productInfo[activePackage] : null;
-    
-    if (!baseProduct) return null;
-    
-    // For packages
-    if (baseProduct.isPackage) {
-      const pkg = packages.find(p => p.id === activePackage);
-      if (pkg) {
-        const availability = getPackageAvailability(pkg);
-        return {
-          ...baseProduct,
-          price: `₱${pkg.price.toLocaleString()}/day`,
-          isPackage: true,
-          isAvailable: availability.isAvailable,
-          unavailableItems: availability.unavailableItems,
-          packageData: pkg
-        };
-      }
-    }
-    
-    // For individual items
-    const realTimeProduct = getCurrentProductData();
-    const combinedProduct = { ...baseProduct };
-    
-    if (realTimeProduct) {
-      combinedProduct.price = realTimeProduct.price ? `₱${realTimeProduct.price.toLocaleString()}/day` : 'Price on request';
-      const stock = getAvailableForRent ? getAvailableForRent(realTimeProduct) : 0;
-      combinedProduct.stock = stock;
-      combinedProduct.available = realTimeProduct.availableQuantity || 0;
-      combinedProduct.reserved = realTimeProduct.reservedQuantity || 0;
-    } else {
-      // Fallback to AppContext initial rental items if no real-time data
-      const allItems = getAllRentalItems ? getAllRentalItems() : [];
-      const appContextItem = allItems.find(item => item.id === activeProduct);
-      
-      if (appContextItem) {
-        combinedProduct.price = appContextItem.price ? `₱${appContextItem.price.toLocaleString()}/day` : 'Price on request';
-        const stock = getAvailableForRent ? getAvailableForRent(appContextItem) : 0;
-        combinedProduct.stock = stock;
-        combinedProduct.available = appContextItem.availableQuantity || 0;
-        combinedProduct.reserved = appContextItem.reservedQuantity || 0;
-      } else {
-        // Final fallback to predefined prices
-        const predefinedPrices = {
-          "sachtler-tripod": "₱3,500/day",
-          "cartoni-tripod": "₱3,500/day",
-          "eimage-tripod": "₱2,500/day",
-          "pmw-200": "₱5,000/day",
-          "sony-pmw-350k": "₱7,000/day",
-          "panasonic-hpx3100": "₱8,000/day",
-          "saramonic-comset": "₱3,000/day",
-          "lumantek-switcher": "₱4,000/day",
-          "sony-mcx-500": "₱4,500/day",
-          "blackmagic-atem": "₱4,500/day",
-          "behringer-mixer": "₱1,500/day",
-          "xtuga-mixer": "₱1,200/day",
-          "atem-monitor": "₱2,000/day",
-          "lilliput-monitor": "₱1,800/day",
-          "tvlogic-monitor": "₱2,200/day",
-          "accsoon-transmitter": "₱2,500/day",
-          "hollyland-transmitter": "₱3,000/day",
-          "dolly-platform": "₱5,000/day",
-          "wheels-slider": "₱3,500/day"
-        };
-        
-        combinedProduct.price = predefinedPrices[activeProduct] || 'Price on request';
-        
-        // Fallback stock for predefined items
-        const predefinedStock = {
-          "sachtler-tripod": 2,
-          "cartoni-tripod": 4,
-          "eimage-tripod": 3,
-          "pmw-200": 3,
-          "sony-pmw-350k": 2,
-          "panasonic-hpx3100": 3,
-          "saramonic-comset": 2,
-          "lumantek-switcher": 2,
-          "sony-mcx-500": 2,
-          "blackmagic-atem": 2,
-          "behringer-mixer": 2,
-          "xtuga-mixer": 2,
-          "atem-monitor": 2,
-          "lilliput-monitor": 2,
-          "tvlogic-monitor": 2,
-          "accsoon-transmitter": 3,
-          "hollyland-transmitter": 3,
-          "dolly-platform": 1,
-          "wheels-slider": 3
-        };
-        
-        combinedProduct.stock = predefinedStock[activeProduct] || 0;
-      }
-    }
-    
-    return combinedProduct;
-  }, [activeProduct, activePackage, getProductInfo, getCurrentProductData, getAllRentalItems, getAvailableForRent]);
-
   const getBackPath = () => {
     if (activePackage) return '/packages';
     if (window.location.search.includes('package')) return '/packages';
@@ -778,38 +921,31 @@ const Information = () => {
   };
 
   // ==============================================
-  // FIX 5: Updated Add to Cart function - SIMPLER & MORE RELIABLE
+  // UPDATED: Add to Cart function
   // ==============================================
   const handleAddToCart = () => {
-    if (!currentProduct) return;
-    
-    if (!user) {
-      alert("Please log in to add items to your cart.");
+    if (!currentProduct || !user) {
+      showMessage("Please log in to add items to your cart.");
       navigate('/login-register');
       return;
     }
     
-    // If it's a package, redirect to packages page
     if (currentProduct.isPackage) {
-      alert("To select this package, please go to the Packages page.");
+      showMessage("To select this package, please go to the Packages page.");
       navigate('/packages');
       return;
     }
     
-    // Individual item logic
     const availableStock = currentProduct.stock || 0;
     if (availableStock <= 0) {
-      alert("This item is currently out of stock.");
+      showMessage("This item is currently out of stock.");
       return;
     }
     
     const userCartKey = `rentalCart_${user.uid}`;
-    
-    // ALWAYS get fresh cart from localStorage
     const savedCart = localStorage.getItem(userCartKey);
     let cart = savedCart ? JSON.parse(savedCart) : {};
     
-    // Clean cart of any invalid entries (safety check)
     const cleanedCart = {};
     Object.keys(cart).forEach(key => {
       if (cart[key] && cart[key].itemId && cart[key].quantity > 0) {
@@ -822,38 +958,23 @@ const Information = () => {
     const itemName = currentProduct.title;
     const itemId = activeProduct || activePackage;
     
-    // Get price from AppContext
     let itemPrice = 0;
     const realTimeProduct = getCurrentProductData();
     if (realTimeProduct && realTimeProduct.price) {
       itemPrice = realTimeProduct.price;
     } else {
-      // Fallback prices (matching AppContext)
       const predefinedPrices = {
-        "sachtler-tripod": 3500,
-        "cartoni-tripod": 3500,
-        "eimage-tripod": 2500,
-        "pmw-200": 5000,
-        "sony-pmw-350k": 7000,
-        "panasonic-hpx3100": 8000,
-        "saramonic-comset": 3000,
-        "lumantek-switcher": 4000,
-        "sony-mcx-500": 4500,
-        "blackmagic-atem": 4500,
-        "behringer-mixer": 1500,
-        "xtuga-mixer": 1200,
-        "atem-monitor": 2000,
-        "lilliput-monitor": 1800,
-        "tvlogic-monitor": 2200,
-        "accsoon-transmitter": 2500,
-        "hollyland-transmitter": 3000,
-        "dolly-platform": 5000,
-        "wheels-slider": 3500
+        "sachtler-tripod": 3500, "cartoni-tripod": 3500, "eimage-tripod": 2500,
+        "pmw-200": 5000, "sony-pmw-350k": 7000, "panasonic-hpx3100": 8000,
+        "saramonic-comset": 3000, "lumantek-switcher": 4000, "sony-mcx-500": 4500,
+        "blackmagic-atem": 4500, "behringer-mixer": 1500, "xtuga-mixer": 1200,
+        "atem-monitor": 2000, "lilliput-monitor": 1800, "tvlogic-monitor": 2200,
+        "accsoon-transmitter": 2500, "hollyland-transmitter": 3000,
+        "dolly-platform": 5000, "wheels-slider": 3500
       };
       itemPrice = predefinedPrices[itemId] || 0;
     }
     
-    // Check if item already exists in cart by ID
     let existingCartKey = null;
     Object.keys(cart).forEach(key => {
       if (cart[key].itemId === itemId) {
@@ -861,26 +982,22 @@ const Information = () => {
       }
     });
     
-    // If item exists but with different display name, update the name
     if (existingCartKey && existingCartKey !== itemName) {
       cart[itemName] = { ...cart[existingCartKey] };
       delete cart[existingCartKey];
       existingCartKey = itemName;
     }
     
-    // Calculate current quantity
     const currentInCart = existingCartKey ? cart[existingCartKey].quantity : 0;
     
-    // Check if adding would exceed available stock
     if (currentInCart >= availableStock) {
-      alert(`Only ${availableStock} units available for "${itemName}". You already have ${currentInCart} in your cart.`);
+      showMessage(`Only ${availableStock} units available for "${itemName}". You already have ${currentInCart} in your cart.`);
       return;
     }
     
-    // Update cart quantity
     if (existingCartKey) {
       cart[existingCartKey].quantity += 1;
-      cart[existingCartKey].price = itemPrice; // Ensure price is correct
+      cart[existingCartKey].price = itemPrice;
     } else {
       cart[itemName] = {
         quantity: 1,
@@ -889,21 +1006,48 @@ const Information = () => {
       };
     }
     
-    // Save updated cart to localStorage
     localStorage.setItem(userCartKey, JSON.stringify(cart));
-    
-    // Show success message
     const newQuantity = existingCartKey ? cart[existingCartKey].quantity : 1;
-    alert(`${itemName} added to cart! (Total: ${newQuantity})`);
+    showMessage(`${itemName} added to cart! (Total: ${newQuantity})`);
     
-    // Trigger cart update event for RentItems.js
     window.dispatchEvent(new CustomEvent('cartUpdated', {
       detail: { itemId, quantity: newQuantity }
     }));
   };
 
-  // Get productInfo for use in JSX
-  const productInfo = React.useMemo(() => getProductInfo(), [getProductInfo]);
+  const showSidebar = () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'flex';
+  };
+
+  const hideSidebar = () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading product information...</p>
+      </div>
+    );
+  }
+
+  if (!currentProduct) {
+    return (
+      <div className="no-product-found">
+        <p>Product not found. Please go back and try again.</p>
+        <button 
+          onClick={() => navigate('/rent-items')}
+          className="back-btn"
+        >
+          ← Back to Rent Items
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1058,24 +1202,14 @@ const Information = () => {
                   <p className="product-description">{currentProduct.description}</p>
                 </div>
 
-                {/* Package Includes (for packages) */}
-                {currentProduct.displayItems && (
+                {/* ============================================== */}
+                {/* SPECIFICATIONS SECTION - NOW WORKING FOR ALL ITEMS */}
+                {/* ============================================== */}
+                {displaySpecifications.length > 0 && (
                   <div className="specifications-section">
-                    <h3>Package Includes</h3>
+                    <h3>{currentProduct.isPackage ? 'Package Includes' : 'Specifications'}</h3>
                     <ul className="specifications-list">
-                      {currentProduct.displayItems.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Specifications (for individual items) */}
-                {currentProduct.specifications && (
-                  <div className="specifications-section">
-                    <h3>Specifications</h3>
-                    <ul className="specifications-list">
-                      {currentProduct.specifications.map((spec, index) => (
+                      {displaySpecifications.map((spec, index) => (
                         <li key={index}>{spec}</li>
                       ))}
                     </ul>
@@ -1083,12 +1217,13 @@ const Information = () => {
                 )}
 
                 {/* Package Items (if package) */}
-                {currentProduct.items && (
+                {currentProduct.items && currentProduct.isPackage && (
                   <div className="package-items-section">
                     <h3>Equipment Included</h3>
                     <div className="package-items-grid">
                       {currentProduct.items.map((item, index) => {
-                        const fullProduct = productInfo[item.id];
+                        const allProducts = allProductsRef.current;
+                        const fullProduct = allProducts[item.id];
                         return (
                           <div 
                             key={index} 
@@ -1117,7 +1252,7 @@ const Information = () => {
                     <button 
                       onClick={handleProceedToSchedule}
                       disabled={!user || !currentProduct.isAvailable}
-                      className="proceed-schedule-btn" // CHANGED: Same style as select package
+                      className="proceed-schedule-btn"
                     >
                       {!user ? 'Login to Proceed to Schedule' : 
                        (!currentProduct.isAvailable ? 'Package Unavailable' : 'Proceed to Schedule')}
@@ -1146,8 +1281,6 @@ const Information = () => {
                 </div>
               </div>
             </div>
-
-            {/* Package Selection Confirmation - REMOVED since no selection in ℹ view */}
           </div>
         ) : (
           <div className="no-product-found">
@@ -1209,7 +1342,6 @@ const Information = () => {
           </div>
         </div>
       </footer>
-   
     </>
   );
 };
