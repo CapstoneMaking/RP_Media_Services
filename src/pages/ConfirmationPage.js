@@ -499,50 +499,117 @@ const ConfirmationPage = () => {
 
   const policyTexts = {
     userAgreement: `
-      <h1>User Agreement</h1>
-      <p>By using our services, you agree to the terms below. This agreement is between you ("User" or "Renter") and <strong>RP MEDIA SERVICES</strong>.</p>
-      <h2>1.1. Eligibility</h2>
-      <p>You must be at least 18 years old and provide a valid government-issued ID to rent any equipment.</p>
-      <h2>1.2. Account Responsibility</h2>
-      <p>You are responsible for the security of your account and any equipment rented through it.</p>
-      <h2>1.3. Rental Usage</h2>
-      <p>You agree to use the equipment only for legal purposes and to take care of the items as if they were your own.</p>
+      <h1>USER AGREEMENT</h1>
+      <p>This User Agreement ("Agreement") constitutes a legally binding contract between you ("User" or "Renter") and RP MEDIA SERVICES ("Company," "we," "us," or "our"). By accessing or utilizing our rental services, you expressly agree to be bound by the terms and conditions set forth herein.</p>
+      
+      <h2>1.1. ELIGIBILITY AND IDENTIFICATION REQUIREMENTS</h2>
+      <p>Users must be at least eighteen (18) years of age and possess full legal capacity. Registration requires presentation of one of the following valid Philippine government-issued identification cards:</p>
+      <ul>
+        <li>Philippine National ID (PhilSys ID)</li>
+        <li>ePhilID (Philippine Identification System)</li>
+      </ul>
+      <p>No other forms of identification (including but not limited to driver's licenses, passports, or other government documents) will be accepted for registration purposes. The Company reserves the right to verify the presented identification and reject any application at its sole discretion.</p>
+      
+      <h2>1.2. ACCOUNT SECURITY AND RESPONSIBILITY</h2>
+      <p>The User assumes full responsibility for maintaining the confidentiality of account credentials and for all activities conducted under said account. Any unauthorized access must be reported to the Company immediately.</p>
+      
+      <h2>1.3. AUTHORIZED USAGE</h2>
+      <p>All rented equipment shall be utilized exclusively for lawful purposes. Any use in violation of applicable laws is strictly prohibited.</p>
+      
+      <h2>1.4. COMPANY-ASSIGNED EQUIPMENT CARETAKER</h2>
+      <p>All equipment rentals include a trained Company staff member ("Equipment Caretaker") who shall remain with the equipment throughout the rental period. The Caretaker's primary responsibilities include equipment operation oversight, preventive maintenance, troubleshooting, and ensuring proper handling according to manufacturer specifications.</p>
     `,
+    
     privacyPolicy: `
-      <h1>Privacy Policy</h1>
-      <h2>2.1. Information We Collect</h2>
+      <h1>PRIVACY POLICY</h1>
+      <p>RP MEDIA SERVICES is committed to protecting the privacy and security of your personal information. This Privacy Policy outlines our practices regarding the collection, use, and disclosure of your data.</p>
+      
+      <h2>2.1. INFORMATION COLLECTION</h2>
+      <p>We collect the following categories of personal information:</p>
       <ul>
-        <li>Full Name</li>
-        <li>Contact Information</li>
-        <li>Government-issued ID</li>
-        <li>Payment Details</li>
+        <li>Full Legal Name</li>
+        <li>Contact Information (address, telephone number, email)</li>
+        <li>Philippine National ID or ePhilID Number (for verification only)</li>
+        <li>Payment Information and Transaction History</li>
+        <li>Event Location and Schedule Details</li>
       </ul>
-      <h2>2.2. Use of Information</h2>
-      <p>We use your information for verification, processing rentals, and legal compliance.</p>
+      <p><strong>Important:</strong> We accept only Philippine National ID (PhilSys ID) or ePhilID for identification purposes. We do not retain copies of physical identification cards. We only verify their validity during the registration process and record the identification number for reference and verification purposes in accordance with Philippine law.</p>
+      
+      <h2>2.2. PURPOSE OF PROCESSING</h2>
+      <p>Your information is processed for the following legitimate business purposes:</p>
+      <ul>
+        <li>Identity verification using Philippine National ID/ePhilID</li>
+        <li>Rental transaction processing</li>
+        <li>Equipment tracking and accountability</li>
+        <li>Caretaker assignment and scheduling</li>
+        <li>Compliance with Republic Act No. 10173 (Data Privacy Act of 2012)</li>
+        <li>Fraud prevention and security measures</li>
+      </ul>
+      
+      <h2>2.3. DATA RETENTION AND SECURITY</h2>
+      <p>Personal data shall be retained only for as long as necessary to fulfill the purposes outlined herein or as required by Philippine law. We implement appropriate technical and organizational measures to protect against unauthorized access, alteration, or destruction of your personal information, in compliance with the Data Privacy Act of 2012.</p>
     `,
+    
     paymentPolicy: `
-      <h1>Payment and Fees Policy</h1>
-      <h2>3.1. Payment Methods</h2>
-      <p>We accept Bank Transfer and Paypal.</p>
-      <h2>3.2. Payment Terms</h2>
+      <h1>PAYMENT AND FEES POLICY</h1>
+      
+      <h2>3.1. ACCEPTED PAYMENT METHODS</h2>
+      <p>RP MEDIA SERVICES accepts payments via Bank Transfer and PayPal. All transactions must be settled in Philippine Pesos (₱) unless otherwise agreed in writing.</p>
+      
+      <h2>3.2. PAYMENT TERMS AND SCHEDULE</h2>
       <ul>
-        <li>Full payment required before equipment release</li>
-        <li>₱1000 reservation fee required to secure booking</li>
-        <li>Late returns charged 100% of rental fee per day</li>
+        <li>A non-refundable reservation fee of ₱1,000 is required to secure any booking, which will be applied toward the total rental cost.</li>
+        <li>Full payment of the remaining balance must be received and cleared at least forty-eight (48) hours prior to equipment release.</li>
+        <li>The rental fee includes the Equipment Caretaker's professional services during standard operating hours (8:00 AM to 6:00 PM).</li>
+      </ul>
+      
+      <h2>3.3. ADDITIONAL CHARGES AND FEES</h2>
+      <ul>
+        <li>Overtime charges for Caretaker services beyond standard hours: ₱500 per hour, billed in 30-minute increments.</li>
+        <li>Meal allowance for Caretaker during rental period: ₱300 per meal (breakfast, lunch, dinner) for rentals exceeding 5 hours.</li>
+        <li>Transportation reimbursement for Caretaker if event location exceeds 15km from our facility.</li>
+        <li>Late returns will incur a penalty charge of one hundred percent (100%) of the daily rental rate for each day beyond the agreed return date and time.</li>
       </ul>
     `,
+    
     rentalPolicy: `
-      <h1>Equipment and Rental Policy</h1>
-      <h2>4.1. Equipment Inspection</h2>
-      <p>All cameras include battery, SDI, HDMI, SD card, and charger.</p>
-      <h2>4.2. Renter Responsibilities</h2>
+      <h1>EQUIPMENT AND RENTAL POLICY</h1>
+      
+      <h2>4.1. EQUIPMENT SPECIFICATIONS AND INSPECTION</h2>
+      <p>All rental equipment is provided with standard accessories as specified in the rental agreement. A comprehensive inspection report documenting the equipment's condition shall be completed jointly by the User and the assigned Equipment Caretaker prior to release.</p>
+      
+      <h2>4.2. IDENTIFICATION VERIFICATION AT PICKUP</h2>
+      <p>At the time of equipment pickup, the User must present the same valid Philippine National ID or ePhilID used during registration. The assigned Equipment Caretaker will verify this identification before releasing any equipment. No equipment will be released without proper ID verification.</p>
+      
+      <h2>4.3. EQUIPMENT CARETAKER PROVISIONS</h2>
       <ul>
-        <li>Responsible for equipment during rental period</li>
-        <li>Do not attempt repairs</li>
-        <li>Report damages immediately</li>
+        <li>The Company shall assign a qualified Equipment Caretaker for the duration of the rental period.</li>
+        <li>The Caretaker possesses operational expertise and shall provide basic operational guidance upon request.</li>
+        <li>The User is responsible for providing the Caretaker with adequate meal provisions (or the applicable meal allowance) and reasonable breaks during the rental period.</li>
+        <li>The Caretaker must have access to safe working conditions, including protection from hazardous environments or extreme weather conditions.</li>
+        <li>The User shall ensure the Caretaker's personal safety and provide reasonable accommodations as needed.</li>
+        <li>The Caretaker retains the right to suspend equipment operation if unsafe conditions or improper usage is observed.</li>
       </ul>
+      
+      <h2>4.4. USER RESPONSIBILITIES AND LIMITATIONS</h2>
+      <ul>
+        <li>The User must follow the Caretaker's instructions regarding proper equipment handling and operation.</li>
+        <li>Only the assigned Caretaker or User (under Caretaker supervision) may operate the equipment.</li>
+        <li>Any malfunction or damage must be reported immediately to the Caretaker.</li>
+        <li>The User shall not interfere with the Caretaker's professional duties or disregard safety recommendations.</li>
+      </ul>
+      
+      <h2>4.5. RETURN AND INSPECTION PROCEDURE</h2>
+      <p>Equipment must be returned at the agreed date, time, and location under the supervision of the assigned Caretaker. A post-rental inspection will be conducted with the User present. Discrepancies between pre- and post-rental condition reports may result in additional charges.</p>
+      
+      <h2>4.6. LIABILITY AND INSURANCE</h2>
+      <p>The Company maintains comprehensive insurance covering equipment damage, third-party liability, and Caretaker occupational safety. However, the User remains liable for damages resulting from negligence, misuse contrary to Caretaker instructions, or failure to provide safe working conditions. The Company's insurance does not cover User's production losses or consequential damages.</p>
+      
+      <h2>4.7. CARE OF COMPANY PERSONNEL</h2>
+      <p>The User agrees to provide the assigned Equipment Caretaker with reasonable sustenance (meals and beverages) during the rental period, or alternatively, remit the standard meal allowance as specified in Section 3.3. The User shall ensure the Caretaker has access to basic facilities including restroom breaks, seating during appropriate intervals, and protection from extreme environmental conditions. Failure to provide reasonable care for Company personnel may result in early termination of the rental agreement without refund.</p>
     `
   };
+
 
   const showPolicy = (policyKey) => {
     setPolicyContent(policyTexts[policyKey]);

@@ -70,11 +70,16 @@ const AdminCollectionsPanel = ({
   const [deletingFileId, setDeletingFileId] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState('view'); // 'view' or 'create'
   const [fileTypeFilter, setFileTypeFilter] = useState('all'); // 'all', 'image', 'video'
+  
+  // MODIFIED: Store upload progress by collection ID
   const [uploadProgress, setUploadProgress] = useState({
     inProgress: false,
+    collectionId: null,
+    collectionName: '',
     total: 0,
     completed: 0,
-    currentFile: ''
+    currentFile: '',
+    failedFiles: []
   });
   
   const fileInputRef = useRef(null);
@@ -85,6 +90,14 @@ const AdminCollectionsPanel = ({
       loadCollectionFiles(selectedCollection);
     }
   }, [selectedCollection]);
+
+  // NEW: Check if selected collection is currently uploading
+  useEffect(() => {
+    if (selectedCollection && uploadProgress.collectionId === selectedCollection.id) {
+      // Collection is being uploaded to, we can show progress
+      console.log('Collection is uploading:', selectedCollection.name);
+    }
+  }, [selectedCollection, uploadProgress]);
 
   const loadCollectionFiles = async (collection) => {
     try {
@@ -243,41 +256,57 @@ const AdminCollectionsPanel = ({
       }
 
       const collectionId = collectionResult.id;
+      const newCollection = collectionResult.collection || { id: collectionId, name: collectionName };
 
-      // Set upload progress state
+      // Set upload progress state with collection ID
       setUploadProgress({
         inProgress: true,
+        collectionId: collectionId,
+        collectionName: collectionName,
         total: selectedFiles.length,
         completed: 0,
-        currentFile: 'Starting upload...'
+        currentFile: 'Starting upload...',
+        failedFiles: []
       });
+
+      // Automatically switch to view tab and select this collection
+      setActiveSubTab('view');
+      setSelectedCollection(newCollection);
 
       const uploadResults = await uploadMultipleFilesToCollection(
         selectedFiles, 
         collectionId, 
         collectionName, 
         collectionDescription,
-        // Progress callback if your upload function supports it
-        (progress, fileName) => {
+        // Progress callback
+        (progress, fileName, error) => {
           setUploadProgress(prev => ({
             ...prev,
             completed: progress,
-            currentFile: fileName || `Uploading file ${progress + 1} of ${prev.total}`
+            currentFile: fileName || `Uploading file ${progress + 1} of ${prev.total}`,
+            failedFiles: error ? [...prev.failedFiles, { fileName, error }] : prev.failedFiles
           }));
         }
       );
-
-      // Reset upload progress
-      setUploadProgress({ inProgress: false, total: 0, completed: 0, currentFile: '' });
 
       // Analyze upload results
       const successfulUploads = uploadResults.filter(r => r && r.success).length;
       const failedUploads = uploadResults.filter(r => r && !r.success);
 
+      // Update progress to show completion
+      setUploadProgress(prev => ({
+        ...prev,
+        inProgress: false,
+        completed: prev.total,
+        currentFile: failedUploads.length > 0 ? 
+          `Upload completed with ${failedUploads.length} errors` : 
+          'Upload completed successfully!'
+      }));
+
+      // Reload files after upload
+      await loadCollectionFiles(newCollection);
+
       if (failedUploads.length > 0) {
-        console.error('Failed uploads:', failedUploads);
-        
-        // Show detailed error to admin
         const errorMessages = failedUploads.map(f => 
           `• ${f.fileName || f.name || 'Unknown file'}: ${f.error || 'Unknown error'}`
         ).join('\n');
@@ -288,12 +317,15 @@ const AdminCollectionsPanel = ({
       if (successfulUploads > 0) {
         showMessage(`Collection "${collectionName}" created successfully with ${successfulUploads} files!`);
         resetForm();
-        setActiveSubTab('view');
       } else {
         showMessage('Collection created but no files were uploaded successfully. You can add files to this collection later.');
       }
     } catch (error) {
-      setUploadProgress({ inProgress: false, total: 0, completed: 0, currentFile: '' });
+      setUploadProgress(prev => ({
+        ...prev,
+        inProgress: false,
+        currentFile: `Error: ${error.message || 'Upload failed'}`
+      }));
       console.error('Error creating collection:', error);
       showMessage(`Error creating collection: ${error.message || 'Unknown error'}`);
     }
@@ -305,7 +337,6 @@ const AdminCollectionsPanel = ({
     setCollectionDescription('');
     setCollectionPrice(0);
     setSelectedUsers([]);
-    setUploadProgress({ inProgress: false, total: 0, completed: 0, currentFile: '' });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -319,6 +350,18 @@ const AdminCollectionsPanel = ({
         if (selectedCollection?.id === collectionId) {
           setSelectedCollection(null);
           setCurrentCollectionFiles([]);
+        }
+        // Clear upload progress if it was for this collection
+        if (uploadProgress.collectionId === collectionId) {
+          setUploadProgress({
+            inProgress: false,
+            collectionId: null,
+            collectionName: '',
+            total: 0,
+            completed: 0,
+            currentFile: '',
+            failedFiles: []
+          });
         }
       } else {
         showMessage('Failed to delete collection');
@@ -415,6 +458,10 @@ const AdminCollectionsPanel = ({
     const filteredFiles = getFilteredFiles();
     const imageCount = currentCollectionFiles.filter(f => getFileType(f) === 'image').length;
     const videoCount = currentCollectionFiles.filter(f => getFileType(f) === 'video').length;
+    
+    // Check if this collection is currently uploading
+    const isUploadingToThisCollection = uploadProgress.inProgress && 
+                                      uploadProgress.collectionId === selectedCollection.id;
 
     return (
       <div className="dashboard">
@@ -445,6 +492,41 @@ const AdminCollectionsPanel = ({
           </div>
         </div>
 
+        {/* NEW: Upload Progress Banner for this collection */}
+        {isUploadingToThisCollection && (
+          <div className="upload-progress-banner slide-in">
+            <div className="progress-header">
+              <h4>
+                <div className="spinner spinner-small"></div>
+                Uploading to "{uploadProgress.collectionName}"...
+              </h4>
+              <span>{uploadProgress.completed} of {uploadProgress.total} files</span>
+            </div>
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+              ></div>
+            </div>
+            <p className="current-file">
+              {uploadProgress.currentFile}
+              {uploadProgress.failedFiles.length > 0 && (
+                <span className="error-count">
+                  ({uploadProgress.failedFiles.length} errors)
+                </span>
+              )}
+            </p>
+            
+            {uploadProgress.failedFiles.length > 0 && (
+              <div className="failed-files">
+                <p className="error-message">
+                  Some files failed to upload. You can try adding them again later.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="slide-up">
           {/* File Type Filter */}
           <div className="file-type-filter">
@@ -468,10 +550,15 @@ const AdminCollectionsPanel = ({
             </button>
           </div>
 
-          {filteredFiles.length === 0 ? (
+          {filteredFiles.length === 0 && !isUploadingToThisCollection ? (
             <div className="empty-state">
               <h3>No Files Found</h3>
               <p>No {fileTypeFilter === 'all' ? '' : fileTypeFilter} files in this collection.</p>
+              {isUploadingToThisCollection && (
+                <p className="uploading-message">
+                  Files are currently being uploaded...
+                </p>
+              )}
             </div>
           ) : (
             <div className="files-grid">
@@ -533,6 +620,45 @@ const AdminCollectionsPanel = ({
         <h2>Collections Management</h2>
         <p>Create, view, and manage media collections (images & videos)</p>
       </div>
+
+      {/* NEW: Global Upload Progress Indicator */}
+      {uploadProgress.inProgress && (
+        <div className="global-upload-progress">
+          <div className="progress-card">
+            <div className="progress-header">
+              <h4>
+                <div className="spinner spinner-small"></div>
+                Uploading to "{uploadProgress.collectionName}"...
+              </h4>
+              <button 
+                className="btn btn-link"
+                onClick={() => {
+                  // Find and select the collection being uploaded to
+                  const uploadingCollection = collections.find(
+                    c => c.id === uploadProgress.collectionId
+                  );
+                  if (uploadingCollection) {
+                    setSelectedCollection(uploadingCollection);
+                  }
+                }}
+              >
+                View Collection →
+              </button>
+            </div>
+            <div className="progress-stats">
+              <span>{uploadProgress.completed} of {uploadProgress.total} files</span>
+              <span>{Math.round((uploadProgress.completed / uploadProgress.total) * 100)}%</span>
+            </div>
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ width: `${(uploadProgress.completed / uploadProgress.total) * 100}%` }}
+              ></div>
+            </div>
+            <p className="current-file">{uploadProgress.currentFile}</p>
+          </div>
+        </div>
+      )}
 
       {/* Sub-tabs for Collections */}
       <div className="dashboard-tabs">
@@ -767,7 +893,7 @@ const AdminCollectionsPanel = ({
                                 type="button"
                                 className="remove-file"
                                 onClick={() => removeSelectedFile(file.name)}
-                                disabled={uploading || uploadProgress.inProgress}
+                                disabled={uploadProgress.inProgress}
                               >
                                 ×
                               </button>
@@ -779,8 +905,8 @@ const AdminCollectionsPanel = ({
                   )}
                 </div>
 
-                {/* Upload Progress Display */}
-                {uploadProgress.inProgress && (
+                {/* Upload Progress Display in Create Form */}
+                {uploadProgress.inProgress && uploadProgress.collectionId === null && (
                   <div className="upload-progress-container">
                     <div className="progress-header">
                       <h4>Uploading Files...</h4>
@@ -800,17 +926,12 @@ const AdminCollectionsPanel = ({
                   <button 
                     type="submit" 
                     className="btn btn-primary"
-                    disabled={uploading || uploadProgress.inProgress || selectedFiles.length === 0 || selectedUsers.length === 0}
+                    disabled={uploadProgress.inProgress || selectedFiles.length === 0 || selectedUsers.length === 0}
                   >
                     {uploadProgress.inProgress ? (
                       <>
                         <div className="spinner"></div>
                         Uploading... ({uploadProgress.completed}/{uploadProgress.total})
-                      </>
-                    ) : uploading ? (
-                      <>
-                        <div className="spinner"></div>
-                        Creating Collection...
                       </>
                     ) : (
                       `Create Collection with ${selectedFiles.length} Files`
@@ -821,7 +942,7 @@ const AdminCollectionsPanel = ({
                     type="button" 
                     className="btn btn-secondary"
                     onClick={resetForm}
-                    disabled={uploading || uploadProgress.inProgress}
+                    disabled={uploadProgress.inProgress}
                   >
                     Clear All
                   </button>
