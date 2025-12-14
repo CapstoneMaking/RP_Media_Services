@@ -6,6 +6,55 @@ import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { cloudinaryService } from '../../services/cloudinaryService';
 
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
+
 const UserBookingPanel = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -212,7 +261,7 @@ const UserBookingPanel = () => {
   const handleImageUpload = async (bookingId) => {
     const files = selectedFiles[bookingId];
     if (!files || files.length === 0) {
-      alert('Please select images to upload');
+      showMessage('Please select images to upload');
       return;
     }
 
@@ -255,7 +304,7 @@ const UserBookingPanel = () => {
           
         } catch (uploadError) {
           console.error(`Failed to upload ${file.name}:`, uploadError);
-          alert(`Failed to upload ${file.name}. Please try again.`);
+          showMessage(`Failed to upload ${file.name}. Please try again.`);
         }
       }
       
@@ -279,13 +328,13 @@ const UserBookingPanel = () => {
           return booking;
         }));
         
-        alert(`Successfully uploaded ${uploadedImages.length} image(s)`);
+        showMessage(`Successfully uploaded ${uploadedImages.length} image(s)`);
         setSelectedFiles(prev => ({ ...prev, [bookingId]: [] }));
       }
       
     } catch (error) {
       console.error('Error uploading images:', error);
-      alert('Failed to upload images. Please try again.');
+      showMessage('Failed to upload images. Please try again.');
     } finally {
       setUploadingImages(prev => ({ ...prev, [bookingId]: false }));
       setUploadProgress(prev => ({ ...prev, [bookingId]: null }));
@@ -331,11 +380,11 @@ const UserBookingPanel = () => {
       //   console.error('Failed to delete from Cloudinary:', cloudinaryError);
       // }
       
-      alert('Image deleted successfully');
+      showMessage('Image deleted successfully');
       
     } catch (error) {
       console.error('Error deleting image:', error);
-      alert('Failed to delete image');
+      showMessage('Failed to delete image');
     }
   };
 

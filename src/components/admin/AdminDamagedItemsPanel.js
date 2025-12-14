@@ -1122,7 +1122,7 @@ const handleRepairComplete = async (report) => {
                       </button>
                       <button
                         onClick={() => openDeleteModal(report)}
-                        className="btn btn-secondary"
+                        className="btn btn-warning"
                         disabled={actionLoading}
                       >
                         Delete Report

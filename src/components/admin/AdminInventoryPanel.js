@@ -1,7 +1,57 @@
-// AdminInventoryPanel.js - WITH PREDEFINED ITEMS EDITING SUPPORT
+// AdminInventoryPanel.js - SIMPLIFIED FORM WITH ONLY ESSENTIAL FIELDS
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firebaseService } from '../../services/firebaseService';
+import { cloudinaryService } from '../../services/cloudinaryService';
+
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
 
 const AdminInventoryPanel = () => {
   const [items, setItems] = useState([]);
@@ -11,7 +61,10 @@ const AdminInventoryPanel = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [formData, setFormData] = useState({
+  
+  // Form data state - SIMPLIFIED
+  const [formData, setFormData] = useState(() => ({
+    // Basic Information (ONLY ESSENTIAL FIELDS)
     id: '',
     name: '',
     description: '',
@@ -19,9 +72,16 @@ const AdminInventoryPanel = () => {
     price: 0,
     availableQuantity: 1,
     totalQuantity: 1,
+    
+    // Specifications (array)
+    specifications: ['', '', ''],
+    
+    // Images (single image for simplicity)
     image: null,
     imageFile: null
-  });
+  }));
+  
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const { rentalItems } = useApp();
 
@@ -68,6 +128,14 @@ const AdminInventoryPanel = () => {
   const getItemImage = (item) => {
     if (!item) return '/assets/items/default.png';
     
+    // Check for predefined item image first
+    if (item.isPredefined && item.id) {
+      const predefinedImage = getPredefinedImage(item.id);
+      if (predefinedImage !== '/assets/items/default.png') {
+        return predefinedImage;
+      }
+    }
+    
     // Check for image property
     if (item.image) {
       if (item.image.startsWith('data:image') || item.image.startsWith('http') || item.image.startsWith('/')) {
@@ -80,15 +148,10 @@ const AdminInventoryPanel = () => {
       return item.cloudinaryData.secure_url;
     }
     
-    // Check for predefined items
-    if (isPredefinedItem(item.id)) {
-      return getPredefinedImage(item.id);
-    }
-    
     return '/assets/items/default.png';
   };
 
-  // Helper function to get complete item data including description from productInfo
+  // Helper function to get complete item data
   const getCompleteItemData = (item) => {
     const completeItem = { ...item };
     
@@ -99,7 +162,6 @@ const AdminInventoryPanel = () => {
         const productInfo = JSON.parse(savedProductInfo);
         if (productInfo[item.id]) {
           // Merge productInfo data with inventory data
-          // Preserve description from productInfo if it exists
           if (productInfo[item.id].description && productInfo[item.id].description.trim() !== '') {
             completeItem.description = productInfo[item.id].description;
           }
@@ -107,10 +169,19 @@ const AdminInventoryPanel = () => {
           if (productInfo[item.id].image && !completeItem.image) {
             completeItem.image = productInfo[item.id].image;
           }
+          // Get specifications from productInfo
+          if (productInfo[item.id].specifications && !completeItem.specifications) {
+            completeItem.specifications = productInfo[item.id].specifications;
+          }
         }
       }
     } catch (error) {
       console.error('Error getting complete item data:', error);
+    }
+    
+    // Ensure specifications is an array
+    if (!completeItem.specifications || !Array.isArray(completeItem.specifications)) {
+      completeItem.specifications = [];
     }
     
     return completeItem;
@@ -140,7 +211,13 @@ const AdminInventoryPanel = () => {
       price: item.price || 0,
       availableQuantity: item.availableQuantity || item.quantity || 0,
       totalQuantity: item.totalQuantity || item.maxQuantity || 1,
-      reservedQuantity: item.reservedQuantity || 0
+      reservedQuantity: item.reservedQuantity || 0,
+      
+      // Specifications
+      specifications: Array.isArray(item.specifications) ? item.specifications : [],
+      
+      // Ensure isPackage is set for predefined packages
+      isPackage: item.isPackage || false
     };
 
     // Try to get description from productInfo if item doesn't have one
@@ -152,9 +229,13 @@ const AdminInventoryPanel = () => {
           if (productInfo[normalizedItem.id] && productInfo[normalizedItem.id].description) {
             normalizedItem.description = productInfo[normalizedItem.id].description;
           }
+          // Also get specifications
+          if (productInfo[normalizedItem.id] && productInfo[normalizedItem.id].specifications) {
+            normalizedItem.specifications = productInfo[normalizedItem.id].specifications;
+          }
         }
       } catch (error) {
-        console.error('Error loading description from productInfo:', error);
+        console.error('Error loading data from productInfo:', error);
       }
     }
 
@@ -169,13 +250,6 @@ const AdminInventoryPanel = () => {
       // Clean items before saving (remove File objects)
       const cleanItems = inventoryItems.map(item => {
         const { imageFile, ...cleanItem } = item;
-        
-        // If image is a base64 string, we need to upload it to Cloudinary
-        if (cleanItem.image && cleanItem.image.startsWith('data:image')) {
-          console.warn('Item has base64 image that needs upload:', cleanItem.id);
-          // Keep the base64 for now
-        }
-        
         return cleanItem;
       });
       
@@ -195,7 +269,7 @@ const AdminInventoryPanel = () => {
     }
   };
 
-  // NEW: Save predefined items to Firebase
+  // Save predefined items to Firebase
   const savePredefinedItemsToFirebase = async (predefinedItems) => {
     try {
       console.log('🔄 Saving predefined items to Firebase:', predefinedItems.length, 'items');
@@ -260,30 +334,7 @@ const AdminInventoryPanel = () => {
         console.error('Error loading inventory items:', inventoryError);
       }
       
-      // 3. Load from inventoryItems collection as backup
-      try {
-        const collectionResult = await firebaseService.getAllInventoryItems();
-        if (collectionResult.success && collectionResult.items.length > 0) {
-          console.log('✅ Loaded', collectionResult.items.length, 'items from inventoryItems collection');
-          // Mark as inventory items if not already marked
-          const markedCollectionItems = collectionResult.items.map(item => {
-            const existingItem = allItems.find(i => i.id === item.id);
-            if (existingItem) {
-              return existingItem; // Skip duplicates
-            }
-            return {
-              ...item,
-              isPredefined: false,
-              source: 'inventory'
-            };
-          });
-          allItems = [...allItems, ...markedCollectionItems];
-        }
-      } catch (collectionError) {
-        console.error('Error loading from collection:', collectionError);
-      }
-      
-      // 4. Load from localStorage as final fallback
+      // 3. Load from localStorage as final fallback
       try {
         const savedInventoryItems = localStorage.getItem('rentalItems');
         if (savedInventoryItems) {
@@ -319,7 +370,7 @@ const AdminInventoryPanel = () => {
         }
       });
       
-      // Normalize all items - now includes description from productInfo
+      // Normalize all items
       const normalizedItems = uniqueItems.map(item => normalizeItemData(item));
       
       console.log('📊 Total unique items loaded:', normalizedItems.length);
@@ -345,7 +396,7 @@ const AdminInventoryPanel = () => {
       if (freshItems.length === 0) {
         console.log('ℹ️ No items found in any data source');
         setItems([]);
-        alert('No inventory items found in any data source.');
+        showMessage('No inventory items found in any data source.');
       } else {
         console.log(`✅ Refreshed ${freshItems.length} items`);
         setItems(freshItems);
@@ -355,17 +406,10 @@ const AdminInventoryPanel = () => {
       console.log('📊 Refresh details:');
       console.log('- Predefined items:', freshItems.filter(item => item.isPredefined).length);
       console.log('- User-added items:', freshItems.filter(item => !item.isPredefined).length);
-      console.log('- By category:', 
-        freshItems.reduce((acc, item) => {
-          const cat = item.category || 'uncategorized';
-          acc[cat] = (acc[cat] || 0) + 1;
-          return acc;
-        }, {})
-      );
       
     } catch (error) {
       console.error('❌ Error refreshing inventory:', error);
-      alert(`❌ Error refreshing inventory: ${error.message}`);
+      showMessage(`❌ Error refreshing inventory: ${error.message}`);
     } finally {
       setRefreshing(false);
     }
@@ -429,7 +473,7 @@ const AdminInventoryPanel = () => {
     }
   }, [items]);
 
-  // Update product information - Update ALL items including edited ones
+  // Update product information
   const updateProductInfo = (predefinedItems, userAddedItems) => {
     let productInfo = {};
     
@@ -448,19 +492,24 @@ const AdminInventoryPanel = () => {
       if (productInfo[item.id]) {
         // Check if we should preserve the existing rich description or use the new one
         const existingDescription = productInfo[item.id].description || '';
-        const hasRichDescription = existingDescription.length > 100; // Assume rich descriptions are longer
+        const hasRichDescription = existingDescription.length > 100;
         
         productInfo[item.id] = {
           ...productInfo[item.id],
           title: item.name,
-          description: hasRichDescription ? existingDescription : item.description || existingDescription
+          description: hasRichDescription ? existingDescription : item.description || existingDescription,
+          // Preserve existing specifications or update
+          specifications: productInfo[item.id].specifications || item.specifications || [],
+          category: item.category || 'uncategorized'
         };
       } else {
         // New predefined item (shouldn't happen)
         productInfo[item.id] = {
           title: item.name,
           image: getPredefinedImage(item.id),
-          description: item.description || 'No description available.'
+          description: item.description || 'No description available.',
+          specifications: item.specifications || [],
+          category: item.category || 'uncategorized'
         };
       }
     });
@@ -470,15 +519,23 @@ const AdminInventoryPanel = () => {
       productInfo[item.id] = {
         title: item.name,
         image: getItemImage(item),
-        description: item.description || 'No description available.'
+        description: item.description || 'No description available.',
+        specifications: item.specifications || [],
+        category: item.category || 'uncategorized',
+        isPackage: item.isPackage || false
       };
     });
 
     localStorage.setItem('productInfo', JSON.stringify(productInfo));
   };
 
+  // ==============================================
+  // FORM HANDLERS - SIMPLIFIED
+  // ==============================================
+
+  // Handle basic input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     
     if (name === 'price') {
       const formattedValue = value.replace(/[^\d.]/g, '');
@@ -492,6 +549,20 @@ const AdminInventoryPanel = () => {
         ...prev,
         [name]: numValue
       }));
+    } else if (name === 'image') {
+      // Handle image file upload
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setFormData(prev => ({
+            ...prev,
+            image: e.target.result,
+            imageFile: file
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -500,49 +571,127 @@ const AdminInventoryPanel = () => {
     }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData(prev => ({
-          ...prev,
-          image: e.target.result,
-          imageFile: file
-        }));
+  // Handle specification changes
+  const handleSpecificationChange = (index, value) => {
+    setFormData(prev => {
+      const newSpecifications = [...(prev.specifications || [])];
+      newSpecifications[index] = value;
+      return {
+        ...prev,
+        specifications: newSpecifications
       };
-      reader.readAsDataURL(file);
+    });
+  };
+
+  // Add specification field
+  const addSpecification = () => {
+    setFormData(prev => ({
+      ...prev,
+      specifications: [...(prev.specifications || []), '']
+    }));
+  };
+
+  // Remove specification field
+  const removeSpecification = (index) => {
+    setFormData(prev => {
+      const currentSpecs = prev.specifications || [];
+      const newSpecifications = currentSpecs.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        specifications: newSpecifications
+      };
+    });
+  };
+
+  // Upload image to Cloudinary
+  const uploadImageToCloudinary = async () => {
+    if (!formData.imageFile) return formData.image;
+    
+    setUploadingImage(true);
+    
+    try {
+      // Upload to Cloudinary
+      const cloudinaryResult = await cloudinaryService.uploadImage(formData.imageFile);
+      setUploadingImage(false);
+      return cloudinaryResult.secure_url;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setUploadingImage(false);
+      throw error;
     }
   };
 
-  // Handle form submission - properly update all data sources
+  // Form submission - SIMPLIFIED
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    console.log('🔄 Starting item save process...', { editingItem, formData });
-
+    
     try {
-      // Parse price to ensure it's a number
-      const parsedPrice = parsePrice(formData.price);
+      // Upload image to Cloudinary if there's a new image
+      let finalImage = formData.image;
+      if (formData.imageFile) {
+        finalImage = await uploadImageToCloudinary();
+      }
+      
+      // Parse price
+      const parsedPrice = parsePrice(formData.price || '0');
+      
+      // Prepare item data - ONLY ESSENTIAL FIELDS
+      const itemData = {
+        // Basic Info
+        id: editingItem?.id || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: formData.name || '',
+        description: formData.description || '',
+        category: formData.category || '',
+        price: parsedPrice,
+        availableQuantity: parseInt(formData.availableQuantity) || 1,
+        totalQuantity: parseInt(formData.totalQuantity) || 1,
+        
+        // Specifications (filter out empty strings)
+        specifications: (formData.specifications || []).filter(spec => spec && spec.trim() !== ''),
+        
+        // Image
+        image: finalImage || getPredefinedImage(editingItem?.id) || '/assets/items/default.png',
+        
+        // Metadata
+        createdAt: editingItem?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isPredefined: editingItem?.isPredefined || false,
+        source: editingItem?.source || 'inventory'
+      };
+      
+      // Generate unique ID if needed
+      let itemId = itemData.id;
+      let counter = 1;
+      while (items.some(item => item.id === itemId && item !== editingItem)) {
+        itemId = `${itemData.id}-${counter}`;
+        counter++;
+      }
+      itemData.id = itemId;
+      
+      // Check if editing a predefined item
+      const isEditingPredefined = editingItem?.isPredefined || false;
       
       let updatedItems;
-      let isEditingPredefined = editingItem?.isPredefined || false;
-      
       if (editingItem) {
-        console.log('✏️ Updating existing item:', editingItem.id);
+        console.log('✏️ Updating item:', editingItem.id);
         console.log('Is predefined item?', isEditingPredefined);
         
         // Create the updated item object
         const updatedItem = {
           ...editingItem, // Start with the original item
-          name: formData.name,
-          description: formData.description,
-          category: formData.category,
+          name: formData.name || '',
+          description: formData.description || '',
+          category: formData.category || '',
           price: parsedPrice,
           availableQuantity: parseInt(formData.availableQuantity) || 1,
           totalQuantity: parseInt(formData.totalQuantity) || 1,
+          
+          // Specifications
+          specifications: (formData.specifications || []).filter(spec => spec && spec.trim() !== ''),
+          
           // Update image if changed (but predefined items keep their original image path)
-          image: isEditingPredefined ? editingItem.image : (formData.image !== editingItem.image ? formData.image : editingItem.image)
+          image: isEditingPredefined ? editingItem.image : finalImage || editingItem.image || '/assets/items/default.png'
         };
         
         // Update the items array
@@ -558,36 +707,13 @@ const AdminInventoryPanel = () => {
           const firebaseSuccess = await savePredefinedItemsToFirebase(predefinedItems);
           
           if (!firebaseSuccess) {
-            alert('⚠️ Item updated locally but failed to save to Firebase rental items.');
+            showMessage('⚠️ Predefined item updated locally but failed to save to Firebase.');
           }
         }
       } else {
-        // Generate unique ID for new item
-        const newItemId = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        
-        // Check if ID already exists
-        let counter = 1;
-        let tempId = newItemId;
-        while (items.some(item => item.id === tempId)) {
-          tempId = `${newItemId}-${counter}`;
-          counter++;
-        }
-        
-        console.log('➕ Adding new item with ID:', tempId);
-        const newItem = {
-          id: tempId,
-          name: formData.name,
-          description: formData.description || '',
-          category: formData.category,
-          price: parsedPrice,
-          availableQuantity: parseInt(formData.availableQuantity) || 1,
-          totalQuantity: parseInt(formData.totalQuantity) || 1,
-          image: formData.image,
-          createdAt: new Date().toISOString(),
-          isPredefined: false,
-          source: 'inventory'
-        };
-        updatedItems = [...items, newItem];
+        // Adding new item
+        console.log('➕ Adding new item with ID:', itemId);
+        updatedItems = [...items, itemData];
       }
 
       // Update local state
@@ -607,18 +733,18 @@ const AdminInventoryPanel = () => {
           // Update localStorage
           localStorage.setItem('rentalItems', JSON.stringify(userAddedItems));
           
-          // Update productInfo in localStorage
-          updateProductInfoForItem(editingItem ? editingItem.id : null, formData);
+          // Update productInfo for Information page
+          updateProductInfoForItem(editingItem ? editingItem.id : null, formData, finalImage);
           
-          alert('✅ Item saved successfully!');
+          showMessage('✅ Item saved successfully!');
         } else {
           console.log('⚠️ Item saved locally but failed to save to Firebase inventory');
-          alert('⚠️ Item saved locally but failed to save to database. Please check your connection.');
+          showMessage('⚠️ Item saved locally but failed to save to database. Please check your connection.');
         }
       } else {
         // For predefined items, still update productInfo
-        updateProductInfoForItem(editingItem.id, formData);
-        alert('✅ Predefined item updated successfully!');
+        updateProductInfoForItem(editingItem.id, formData, finalImage);
+        showMessage('✅ Predefined item updated successfully!');
       }
       
       // Trigger refresh to sync with other components
@@ -631,14 +757,14 @@ const AdminInventoryPanel = () => {
       resetForm();
     } catch (error) {
       console.error('❌ Error saving item:', error);
-      alert('❌ Error saving item: ' + error.message);
+      showMessage('❌ Error saving item: ' + error.message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Helper function to update productInfo for a specific item
-  const updateProductInfoForItem = (itemId, formData) => {
+  // Update productInfo for a specific item
+  const updateProductInfoForItem = (itemId, formData, image = '') => {
     try {
       let productInfo = {};
       
@@ -649,12 +775,15 @@ const AdminInventoryPanel = () => {
       }
       
       // Create or update the item in productInfo
-      const targetId = itemId || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const targetId = itemId || (formData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const finalImage = image || formData.image || getPredefinedImage(targetId) || '/assets/items/default.png';
       
       productInfo[targetId] = {
-        title: formData.name,
-        image: formData.image || getPredefinedImage(targetId) || '/assets/items/default.png',
-        description: formData.description || 'No description available.'
+        title: formData.name || '',
+        image: finalImage,
+        description: formData.description || 'No description available.',
+        specifications: (formData.specifications || []).filter(spec => spec && spec.trim() !== ''),
+        category: formData.category || 'uncategorized'
       };
       
       localStorage.setItem('productInfo', JSON.stringify(productInfo));
@@ -664,26 +793,51 @@ const AdminInventoryPanel = () => {
     }
   };
 
+  // Open form for editing
   const handleEdit = (item) => {
-    console.log('📝 Editing item:', item.id);
-    console.log('Is predefined?', item.isPredefined);
-    
-    // Get complete item data including description from productInfo
     const completeItem = getCompleteItemData(item);
     
     setFormData({
-      id: completeItem.id,
-      name: completeItem.name,
+      // Basic Information
+      id: completeItem.id || '',
+      name: completeItem.name || '',
       description: completeItem.description || '',
       category: completeItem.category || '',
       price: formatPrice(completeItem.price || 0),
       availableQuantity: completeItem.availableQuantity || completeItem.quantity || 1,
       totalQuantity: completeItem.totalQuantity || completeItem.maxQuantity || 1,
+      
+      // Specifications
+      specifications: completeItem.specifications && completeItem.specifications.length > 0 
+        ? [...completeItem.specifications, ''] 
+        : ['', '', ''],
+      
+      // Image
       image: getItemImage(completeItem),
       imageFile: null
     });
+    
     setEditingItem(completeItem);
     setShowForm(true);
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      id: '',
+      name: '',
+      description: '',
+      category: '',
+      price: 0,
+      availableQuantity: 1,
+      totalQuantity: 1,
+      specifications: ['', '', ''],
+      image: null,
+      imageFile: null
+    });
+    setEditingItem(null);
+    setShowForm(false);
+    setUploadingImage(false);
   };
 
   // Handle delete - PREVENT deletion of predefined items
@@ -694,7 +848,7 @@ const AdminInventoryPanel = () => {
     
     // PREVENT deletion of predefined items
     if (itemToDelete.isPredefined) {
-      alert('❌ Predefined items cannot be deleted. You can only edit them.');
+      showMessage('❌ Predefined items cannot be deleted. You can only edit them.');
       return;
     }
     
@@ -706,9 +860,7 @@ const AdminInventoryPanel = () => {
         const updatedItems = items.filter(item => item.id !== itemId);
         setItems(updatedItems);
 
-        // 2. It's a user-added item (predefined items already filtered out)
-        
-        // Remove from localStorage rentalItems
+        // 2. Remove from localStorage rentalItems
         const savedInventoryItems = localStorage.getItem('rentalItems');
         if (savedInventoryItems) {
           const inventoryItems = JSON.parse(savedInventoryItems);
@@ -749,28 +901,12 @@ const AdminInventoryPanel = () => {
         }, 500);
         
         console.log(`✅ Item ${itemId} deleted successfully`);
-        alert('✅ Item deleted successfully!');
+        showMessage('✅ Item deleted successfully!');
       } catch (error) {
         console.error('❌ Error deleting item:', error);
-        alert('❌ Error deleting item. Please try again.');
+        showMessage('❌ Error deleting item. Please try again.');
       }
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      id: '',
-      name: '',
-      description: '',
-      category: '',
-      price: 0,
-      availableQuantity: 1,
-      totalQuantity: 1,
-      image: null,
-      imageFile: null
-    });
-    setEditingItem(null);
-    setShowForm(false);
   };
 
   const getItemsByCategory = (category) => {
@@ -785,11 +921,6 @@ const AdminInventoryPanel = () => {
     if (available === 0) return 'out-of-stock';
     if (available < total * 0.3) return 'low-stock';
     return 'in-stock';
-  };
-
-  const isPredefinedItem = (itemId) => {
-    const item = items.find(item => item.id === itemId);
-    return item ? item.isPredefined : false;
   };
 
   const getStockDisplay = (item) => {
@@ -823,7 +954,7 @@ const AdminInventoryPanel = () => {
         <div className="inventory-controls">
           <div className="controls-left">
             <button 
-              onClick={() => setShowForm(true)} 
+              onClick={() => setShowForm(true)}
               className="btn btn-primary"
               disabled={saving || refreshing}
             >
@@ -834,13 +965,7 @@ const AdminInventoryPanel = () => {
               className="btn btn-secondary"
               disabled={refreshing}
             >
-              {refreshing ? (
-                <>
-                   Refreshing...
-                </>
-              ) : (
-                'Refresh Inventory'
-              )}
+              {refreshing ? 'Refreshing...' : 'Refresh Inventory'}
             </button>
           </div>
           
@@ -887,15 +1012,13 @@ const AdminInventoryPanel = () => {
               }).length}
             </p>
           </div>
-        </div>
-
-        {/* Refresh Status Indicator */}
-        {refreshing && (
-          <div className="refresh-status">
-            <div className="refresh-spinner"></div>
-            <p>Refreshing inventory data from all sources...</p>
+          <div className="summary-card predefined-items">
+            <h3>Predefined</h3>
+            <p className="summary-number">
+              {items.filter(item => item.isPredefined).length}
+            </p>
           </div>
-        )}
+        </div>
 
         {/* Inventory Table */}
         <div className="inventory-table-section">
@@ -908,9 +1031,8 @@ const AdminInventoryPanel = () => {
             <div className="no-items-message">
               <p>No items found in this category.</p>
               <button 
-                onClick={() => setShowForm(true)} 
+                onClick={() => setShowForm(true)}
                 className="btn btn-primary"
-                disabled={saving || refreshing}
               >
                 Add Your First Item
               </button>
@@ -920,12 +1042,12 @@ const AdminInventoryPanel = () => {
               <table className="inventory-table">
                 <thead>
                   <tr>
-                    <th>Item Image</th>
+                    <th>Image</th>
                     <th>Item Name</th>
+                    <th>Type</th>
                     <th>Category</th>
                     <th>Price</th>
                     <th>Stock</th>
-                    <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -946,6 +1068,14 @@ const AdminInventoryPanel = () => {
                       </td>
                       <td className="item-name-cell">
                         <strong>{item.name}</strong>
+                        {item.isPackage && <span className="package-badge">Package</span>}
+                      </td>
+                      <td className="item-type">
+                        {item.isPredefined ? (
+                          <span className="type-badge predefined">Predefined</span>
+                        ) : (
+                          <span className="type-badge custom">Custom</span>
+                        )}
                       </td>
                       <td className="item-category">
                         <span className="category-badge">{item.category || 'uncategorized'}</span>
@@ -956,17 +1086,11 @@ const AdminInventoryPanel = () => {
                       <td className="item-stock">
                         {getStockDisplay(item)}
                       </td>
-                      <td className="item-status">
-                        <span className={`status-badge ${getStockStatus(item)}`}>
-                          {getStockStatus(item) === 'out-of-stock' ? 'Out of Stock' :
-                           getStockStatus(item) === 'low-stock' ? 'Low Stock' : 'In Stock'}
-                        </span>
-                      </td>
                       <td className="item-actions">
                         <button
                           onClick={() => handleEdit(item)}
                           className="btn btn-warning btn-sm"
-                          title="Edit Item"
+                          title={item.isPredefined ? "Edit Predefined Item" : "Edit Item Details"}
                           disabled={refreshing}
                         >
                           Edit
@@ -990,7 +1114,7 @@ const AdminInventoryPanel = () => {
         </div>
       </div>
 
-      {/* Add/Edit Item Form Modal */}
+      {/* Item Form Modal - SIMPLIFIED */}
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-content inventory-form">
@@ -1012,13 +1136,23 @@ const AdminInventoryPanel = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="inventory-form-content">
+              {uploadingImage && (
+                <div className="uploading-overlay">
+                  <div className="uploading-progress">
+                    <div className="spinner"></div>
+                    <p>Uploading image...</p>
+                  </div>
+                </div>
+              )}
+              
               <div className="form-grid">
+                {/* Basic Information */}
                 <div className="form-group">
                   <label>Item Name *</label>
                   <input
                     type="text"
                     name="name"
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={handleInputChange}
                     required
                     disabled={saving || refreshing}
@@ -1030,7 +1164,7 @@ const AdminInventoryPanel = () => {
                   <label>Category *</label>
                   <select
                     name="category"
-                    value={formData.category}
+                    value={formData.category || ''}
                     onChange={handleInputChange}
                     required
                     disabled={saving || refreshing}
@@ -1049,7 +1183,7 @@ const AdminInventoryPanel = () => {
                   <input
                     type="text"
                     name="price"
-                    value={formatPrice(formData.price)}
+                    value={formatPrice(formData.price || 0)}
                     onChange={handleInputChange}
                     required
                     disabled={saving || refreshing}
@@ -1064,7 +1198,7 @@ const AdminInventoryPanel = () => {
                   <input
                     type="number"
                     name="totalQuantity"
-                    value={formData.totalQuantity}
+                    value={formData.totalQuantity || 1}
                     onChange={handleInputChange}
                     min="1"
                     required
@@ -1078,10 +1212,10 @@ const AdminInventoryPanel = () => {
                   <input
                     type="number"
                     name="availableQuantity"
-                    value={formData.availableQuantity}
+                    value={formData.availableQuantity || 1}
                     onChange={handleInputChange}
                     min="0"
-                    max={formData.totalQuantity}
+                    max={formData.totalQuantity || 1}
                     required
                     disabled={saving || refreshing}
                     placeholder="Currently available items"
@@ -1092,9 +1226,9 @@ const AdminInventoryPanel = () => {
                   <label>Description *</label>
                   <textarea
                     name="description"
-                    value={formData.description}
+                    value={formData.description || ''}
                     onChange={handleInputChange}
-                    rows="5"
+                    rows="4"
                     placeholder="Describe the item features, specifications, and usage..."
                     disabled={saving || refreshing}
                     required
@@ -1104,13 +1238,54 @@ const AdminInventoryPanel = () => {
                   </p>
                 </div>
 
+                {/* Specifications Section */}
+                <div className="form-group full-width">
+                  <label>Specifications</label>
+                  <div className="specifications-container">
+                    {(formData.specifications || []).map((spec, index) => (
+                      <div key={index} className="specification-input-group">
+                        <input
+                          type="text"
+                          value={spec || ''}
+                          onChange={(e) => handleSpecificationChange(index, e.target.value)}
+                          placeholder={`Specification ${index + 1} (e.g., "4K Resolution", "20MP Sensor")`}
+                          disabled={saving || refreshing}
+                          className="spec-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSpecification(index)}
+                          className="btn btn-danger btn-sm"
+                          disabled={saving || refreshing || (formData.specifications || []).length <= 1}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={addSpecification}
+                      className="btn btn-secondary btn-sm"
+                      disabled={saving || refreshing}
+                    >
+                      + Add Specification
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
+                    These specifications will appear as bullet points in the Information page
+                  </p>
+                </div>
+
+                {/* Image Upload */}
                 <div className="form-group full-width">
                   <label>Item Image</label>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleImageChange}
-                    disabled={saving || refreshing || editingItem?.isPredefined}
+                    name="image"
+                    onChange={handleInputChange}
+                    disabled={saving || refreshing || uploadingImage || editingItem?.isPredefined}
                   />
                   {editingItem?.isPredefined && (
                     <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
@@ -1133,16 +1308,19 @@ const AdminInventoryPanel = () => {
                   type="button" 
                   onClick={resetForm} 
                   className="btn btn-secondary"
-                  disabled={saving || refreshing}
+                  disabled={saving || refreshing || uploadingImage}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   className="btn btn-primary"
-                  disabled={saving || refreshing}
+                  disabled={saving || refreshing || uploadingImage}
                 >
-                  {saving ? 'Saving...' : refreshing ? 'Refreshing...' : editingItem ? 'Update Item' : 'Add Item'}
+                  {saving ? 'Saving...' : 
+                   uploadingImage ? 'Uploading Image...' :
+                   refreshing ? 'Refreshing...' : 
+                   editingItem ? 'Update Item' : 'Save Item'}
                 </button>
               </div>
             </form>

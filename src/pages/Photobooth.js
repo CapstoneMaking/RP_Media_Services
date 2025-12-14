@@ -3,6 +3,54 @@ import { Link } from 'react-router-dom';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { useAuth } from '../context/AuthContext';
 
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
 const Photobooth = () => {
   // Camera state and refs
   const videoRef = useRef(null);
@@ -71,7 +119,7 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
       img.onerror = () => {
         console.error(`Failed to load frame: ${frame.src}`);
         setSelectedFrame("None");
-        alert(`Failed to load frame: ${frame.name}. Please check if the file exists at ${frame.src}`);
+        showMessage(`Failed to load frame: ${frame.name}. Please check if the file exists at ${frame.src}`);
       };
       img.src = frame.src;
     }
@@ -94,7 +142,7 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
         setCameraOn(true);
       };
     } catch (err) {
-      alert("Camera access denied or not available.");
+      showMessage("Camera access denied or not available.");
       console.error(err);
     }
   };
@@ -167,19 +215,19 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
   // Main capture function with perfect frame alignment
   const captureAndUpload = async () => {
     if (!isCameraOn) {
-      alert("Please start camera first!");
+      showMessage("Please start camera first!");
       return;
     }
 
     // Check photo limit
     if (!canTakeMorePhotos) {
-      alert(` Maximum limit reached! You can only take ${MAX_PHOTOS} photos. Please delete some photos to take new ones.`);
+      showMessage(` Maximum limit reached! You can only take ${MAX_PHOTOS} photos. Please delete some photos to take new ones.`);
       return;
     }
 
     const video = videoRef.current;
     if (!video || video.readyState !== 4) {
-      alert("Camera not ready yet! Please wait a moment.");
+      showMessage("Camera not ready yet! Please wait a moment.");
       return;
     }
 
@@ -220,13 +268,13 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
         });
         
         console.log("Photo uploaded successfully:", uploadResult);
-        alert(` Photo captured and uploaded to Cloudinary successfully! (${uploadedImages.length + 1}/${MAX_PHOTOS})`);
+        showMessage(` Photo captured and uploaded to Cloudinary successfully! (${uploadedImages.length + 1}/${MAX_PHOTOS})`);
       } else {
         throw new Error("Failed to capture image");
       }
     } catch (err) {
       console.error("Capture/Upload error:", err);
-      alert(` Error: ${err.message}`);
+      showMessage(` Error: ${err.message}`);
     } finally {
       setIsCapturing(false);
       setIsUploading(false);
@@ -263,7 +311,7 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
       URL.revokeObjectURL(link.href);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      showMessage("Download failed. Please try again.");
     }
   };
 

@@ -1,5 +1,54 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
+
 const AdminCollectionsPanel = ({ 
   collections, 
   users, 
@@ -91,7 +140,7 @@ const AdminCollectionsPanel = ({
       
       // Show warning for oversized files
       if (oversizedFiles.length > 0) {
-        alert(`Some files were skipped due to size limits:\n${oversizedFiles.join('\n')}\n\nLimits: Images ≤10MB, Videos ≤100MB`);
+        showMessage(`Some files were skipped due to size limits:\n${oversizedFiles.join('\n')}\n\nLimits: Images ≤10MB, Videos ≤100MB`);
       }
       
       // Check for duplicate files
@@ -146,12 +195,12 @@ const AdminCollectionsPanel = ({
     e.preventDefault();
     
     if (!collectionName || selectedFiles.length === 0) {
-      alert('Please enter collection name and select at least one file');
+      showMessage('Please enter collection name and select at least one file');
       return;
     }
 
     if (selectedUsers.length === 0) {
-      alert('Please select at least one user to assign this collection to');
+      showMessage('Please select at least one user to assign this collection to');
       return;
     }
 
@@ -169,7 +218,7 @@ const AdminCollectionsPanel = ({
     });
     
     if (oversizedFiles.length > 0) {
-      alert(`Some files exceed size limits:\n${oversizedFiles.map(f => 
+      showMessage(`Some files exceed size limits:\n${oversizedFiles.map(f => 
         `${f.name} (${(f.size/1024/1024).toFixed(1)}MB)`
       ).join('\n')}\n\nLimits: Images ≤10MB, Videos ≤100MB`);
       return;
@@ -189,7 +238,7 @@ const AdminCollectionsPanel = ({
       const collectionResult = await createCollection(collectionData);
       
       if (!collectionResult.success) {
-        alert('Failed to create collection');
+        showMessage('Failed to create collection');
         return;
       }
 
@@ -233,20 +282,20 @@ const AdminCollectionsPanel = ({
           `• ${f.fileName || f.name || 'Unknown file'}: ${f.error || 'Unknown error'}`
         ).join('\n');
         
-        alert(`Collection "${collectionName}" created with ${successfulUploads}/${selectedFiles.length} files.\n\nFailed uploads:\n${errorMessages}\n\nNote: The collection was created but some files failed to upload. You can add more files later.`);
+        showMessage(`Collection "${collectionName}" created with ${successfulUploads}/${selectedFiles.length} files.\n\nFailed uploads:\n${errorMessages}\n\nNote: The collection was created but some files failed to upload. You can add more files later.`);
       }
 
       if (successfulUploads > 0) {
-        alert(`Collection "${collectionName}" created successfully with ${successfulUploads} files!`);
+        showMessage(`Collection "${collectionName}" created successfully with ${successfulUploads} files!`);
         resetForm();
         setActiveSubTab('view');
       } else {
-        alert('Collection created but no files were uploaded successfully. You can add files to this collection later.');
+        showMessage('Collection created but no files were uploaded successfully. You can add files to this collection later.');
       }
     } catch (error) {
       setUploadProgress({ inProgress: false, total: 0, completed: 0, currentFile: '' });
       console.error('Error creating collection:', error);
-      alert(`Error creating collection: ${error.message || 'Unknown error'}`);
+      showMessage(`Error creating collection: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -272,7 +321,7 @@ const AdminCollectionsPanel = ({
           setCurrentCollectionFiles([]);
         }
       } else {
-        alert('Failed to delete collection');
+        showMessage('Failed to delete collection');
       }
     }
   };
@@ -291,10 +340,10 @@ const AdminCollectionsPanel = ({
             setCurrentCollectionFiles(updatedFiles);
           }
         } else {
-          alert('Failed to delete file');
+          showMessage('Failed to delete file');
         }
       } catch (error) {
-        alert('Error deleting file');
+        showMessage('Error deleting file');
       } finally {
         setDeletingFileId(null);
       }

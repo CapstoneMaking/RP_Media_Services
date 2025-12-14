@@ -576,7 +576,6 @@ const LoginRegister = () => {
             >
               {loading ? (
                 <>
-                  <div className="spinner"></div>
                   Creating Account...
                 </>
               ) : (
@@ -652,7 +651,6 @@ const LoginRegister = () => {
             >
               {loading ? (
                 <>
-                  <div className="spinner"></div>
                   Logging in...
                 </>
               ) : (

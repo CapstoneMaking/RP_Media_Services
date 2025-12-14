@@ -1,6 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useIDVerification } from '../../context/IDVerificationContext';
 
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
+
 const UserIDVerificationPanel = ({ onCancel }) => {
   const { userVerification, submitVerification, loading } = useIDVerification();
   const [formData, setFormData] = useState({
@@ -111,7 +160,7 @@ const UserIDVerificationPanel = ({ onCancel }) => {
     const hasExistingImages = userVerification?.idFront && userVerification?.idBack && userVerification?.selfie;
     
     if (!hasNewImages && !hasExistingImages) {
-      alert('Please upload all required images');
+      showMessage('Please upload all required images');
       return;
     }
 
@@ -125,7 +174,7 @@ const UserIDVerificationPanel = ({ onCancel }) => {
     const result = await submitVerification(verificationData);
     
     if (result.success) {
-      alert(userVerification ? 'ID verification resubmitted successfully! It will be reviewed again by our team.' : 'ID verification submitted successfully! It will be reviewed by our team.');
+      showMessage(userVerification ? 'ID verification resubmitted successfully! It will be reviewed again by our team.' : 'ID verification submitted successfully! It will be reviewed by our team.');
       if (!userVerification) {
         setFormData({
           firstName: '',
@@ -147,7 +196,7 @@ const UserIDVerificationPanel = ({ onCancel }) => {
       }
       if (onCancel) onCancel();
     } else {
-      alert('Failed to submit verification: ' + result.error);
+      showMessage('Failed to submit verification: ' + result.error);
     }
   };
 

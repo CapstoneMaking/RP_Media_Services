@@ -5,6 +5,55 @@ import { db } from '../../utils/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
+
 const AdminBookingPanel = ({ isAdmin = false }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -267,7 +316,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
   const isJustReservation = (booking) => {
     const amountPaid = calculateAmountPaid(booking);
     const totalAmount = calculateTotalAmount(booking);
-    
+
     // It's just a reservation if no payment has been made
     return amountPaid === 0 && totalAmount > 0;
   };
@@ -276,11 +325,11 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
   const filteredBookings = bookings.filter(booking => {
     const status = getStatus(booking);
     const paymentStatus = getPaymentStatus(booking);
-    
+
     const statusMatch = statusFilter === 'all' || status === statusFilter.toLowerCase();
-    
+
     let paymentStatusMatch;
-    
+
     if (paymentStatusFilter === 'all') {
       paymentStatusMatch = true;
     } else if (paymentStatusFilter === 'no_payment_recorded') {
@@ -344,52 +393,6 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     });
   };
 
-  // Download all images for a booking
-  const downloadAllImages = async (bookingId) => {
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking || !booking.uploadedImages || booking.uploadedImages.length === 0) {
-      window.alert('No images to download');
-      return;
-    }
-
-    try {
-      // Create a link for each image and trigger download
-      booking.uploadedImages.forEach((image, index) => {
-        const link = document.createElement('a');
-        link.href = image.secure_url;
-        link.download = `${booking.name}_${booking.venue}_image_${index + 1}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      });
-
-      window.alert(`Started downloading ${booking.uploadedImages.length} image(s)`);
-    } catch (error) {
-      console.error('Error downloading images:', error);
-      window.alert('Error downloading images');
-    }
-  };
-
-  // Open all images in new tabs
-  const openAllImagesInNewTabs = (bookingId) => {
-    const booking = bookings.find(b => b.id === bookingId);
-    if (!booking || !booking.uploadedImages || booking.uploadedImages.length === 0) {
-      window.alert('No images to open');
-      return;
-    }
-
-    if (booking.uploadedImages.length > 10) {
-      if (!window.confirm(`This will open ${booking.uploadedImages.length} new tabs. Are you sure?`)) {
-        return;
-      }
-    }
-
-    booking.uploadedImages.forEach((image, index) => {
-      setTimeout(() => {
-        window.open(image.secure_url, '_blank');
-      }, index * 100);
-    });
-  };
 
   // Delete an image from booking (admin only)
   const deleteBookingImage = async (bookingId, imageIndex) => {
@@ -430,11 +433,11 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
         closeImageModal();
       }
 
-      window.alert('Image deleted successfully');
+      showMessage('Image deleted successfully');
 
     } catch (error) {
       console.error('Error deleting image:', error);
-      window.alert('Failed to delete image');
+      showMessage('Failed to delete image');
     }
   };
 
@@ -461,12 +464,139 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
           : booking
       ));
 
-      window.alert(`Booking status updated to: ${newStatus}`);
+      showMessage(`Booking status updated to: ${newStatus}`);
     } catch (error) {
       console.error('Error updating booking status:', error);
-      window.alert('Failed to update booking status');
+      showMessage('Failed to update booking status');
     }
   };
+
+  // Process refund for a booking
+const processRefund = async (booking) => {
+  const bookingId = booking.id;
+  const amountPaid = calculateAmountPaid(booking);
+  const totalAmount = calculateTotalAmount(booking);
+  
+  if (amountPaid <= 0) {
+    showMessage("No payment has been made to refund!");
+    return;
+  }
+
+  const maxRefundable = amountPaid; // Can't refund more than paid
+  const amountInput = window.prompt(
+    `Enter refund amount:\n` +
+    `Total Amount: ₱${totalAmount.toLocaleString()}\n` +
+    `Amount Paid: ₱${amountPaid.toLocaleString()}\n` +
+    `Available for refund: ₱${maxRefundable.toLocaleString()}\n\n` +
+    `Enter refund amount (max: ₱${maxRefundable.toLocaleString()}):`,
+    maxRefundable.toString()
+  );
+
+  if (amountInput === null) return; // User cancelled
+
+  const refundAmount = parseFloat(amountInput);
+
+  if (isNaN(refundAmount) || refundAmount <= 0) {
+    showMessage("Please enter a valid positive amount.");
+    return;
+  }
+
+  if (refundAmount > maxRefundable) {
+    showMessage(`Refund amount cannot exceed ₱${maxRefundable.toLocaleString()}.`);
+    return;
+  }
+
+  const reason = window.prompt("Enter reason for refund (optional):", "");
+
+  if (window.confirm(`Are you sure you want to refund ₱${refundAmount.toLocaleString()}?\nReason: ${reason || "No reason provided"}`)) {
+    await updateRefundStatus(bookingId, refundAmount, reason);
+  }
+};
+
+// Update refund status in Firebase
+const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
+  try {
+    const bookingRef = doc(db, "bookings", bookingId);
+    
+    // Get current booking
+    const currentBooking = bookings.find(b => b.id === bookingId);
+    const currentPaymentDetails = currentBooking?.paymentDetails || {};
+    const currentAmountPaid = currentPaymentDetails.amountPaid || 0;
+    
+    // Calculate new amount paid
+    const newAmountPaid = Math.max(0, currentAmountPaid - refundAmount);
+    
+    // Get current admin name
+    const currentAdminName = adminName || user?.displayName || user?.email.split('@')[0] || 'admin';
+    
+    // Determine new payment status
+    let newPaymentStatus;
+    if (newAmountPaid === 0) {
+      newPaymentStatus = 'no_payment_recorded';
+    } else {
+      const totalAmount = calculateTotalAmount(currentBooking);
+      if (newAmountPaid >= totalAmount) {
+        newPaymentStatus = 'payment_completed';
+      } else {
+        newPaymentStatus = 'payment_partially_completed';
+      }
+    }
+    
+    // Add to payment history
+    const paymentHistory = currentPaymentDetails.paymentHistory || [];
+    paymentHistory.push({
+      amount: -refundAmount, // Negative amount for refund
+      date: new Date().toISOString(),
+      status: 'refund_processed',
+      recordedBy: currentAdminName,
+      type: 'refund',
+      reason: reason || "No reason provided"
+    });
+    
+    const updateData = {
+      paymentStatus: newPaymentStatus,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentAdminName,
+      paymentDetails: {
+        ...currentPaymentDetails,
+        amountPaid: newAmountPaid,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: currentAdminName,
+        paymentHistory: paymentHistory
+      }
+    };
+    
+    console.log("Processing refund:", {
+      bookingId,
+      refundAmount,
+      newAmountPaid,
+      newPaymentStatus,
+      updateData
+    });
+    
+    await updateDoc(bookingRef, updateData);
+    
+    // Update local state
+    setBookings(prev => prev.map(booking => {
+      if (booking.id === bookingId) {
+        return {
+          ...booking,
+          paymentStatus: newPaymentStatus,
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentAdminName,
+          paymentDetails: updateData.paymentDetails
+        };
+      }
+      return booking;
+    }));
+    
+    showMessage(`Refund of ₱${refundAmount.toLocaleString()} processed successfully!\nNew amount paid: ₱${newAmountPaid.toLocaleString()}`);
+    
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    showMessage('Failed to process refund');
+  }
+};
 
   // Update payment status in Firebase - UPDATED FOR MULTIPLE PARTIAL PAYMENTS
   const updatePaymentStatus = async (bookingId, action, amount = 0) => {
@@ -534,7 +664,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
       if (action === 'payment_completed') {
         const paymentHistory = currentPaymentDetails.paymentHistory || [];
         const paymentAmount = totalAmount - currentAmountPaid;
-        
+
         if (paymentAmount > 0) {
           paymentHistory.push({
             amount: paymentAmount,
@@ -581,13 +711,13 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
         const message = newPaymentStatus === 'payment_completed'
           ? `Payment completed! Total amount of ₱${totalAmount.toLocaleString()} has been paid in full.`
           : `Partial payment of ₱${amount.toLocaleString()} recorded. Total paid: ₱${newAmountPaid.toLocaleString()}, Balance: ₱${(totalAmount - newAmountPaid).toLocaleString()}`;
-        window.alert(message);
+        showMessage(message);
       } else if (action === 'payment_completed') {
-        window.alert(`Payment marked as completed! Total amount of ₱${totalAmount.toLocaleString()} has been recorded as fully paid.`);
+        showMessage(`Payment marked as completed! Total amount of ₱${totalAmount.toLocaleString()} has been recorded as fully paid.`);
       }
     } catch (error) {
       console.error('Error updating payment status:', error);
-      window.alert('Failed to update payment status');
+      showMessage('Failed to update payment status');
     }
   };
 
@@ -598,7 +728,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     const totalAmount = calculateTotalAmount(booking);
 
     if (balance <= 0) {
-      window.alert("This booking is already fully paid!");
+      showMessage("This booking is already fully paid!");
       return;
     }
 
@@ -616,12 +746,12 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     const amount = parseFloat(amountInput);
 
     if (isNaN(amount) || amount <= 0) {
-      window.alert("Please enter a valid positive amount.");
+      showMessage("Please enter a valid positive amount.");
       return;
     }
 
     if (amount > balance) {
-      window.alert(`Amount cannot exceed the balance of ₱${balance.toLocaleString()}.`);
+      showMessage(`Amount cannot exceed the balance of ₱${balance.toLocaleString()}.`);
       return;
     }
 
@@ -637,7 +767,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     const balance = calculateBalance(booking);
 
     if (balance <= 0) {
-      window.alert("This booking is already fully paid!");
+      showMessage("This booking is already fully paid!");
       return;
     }
 
@@ -667,7 +797,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     switch (status) {
       case 'payment_completed': return '#28a745'; // Green
       case 'payment_partially_completed': return '#ffc107'; // Yellow
-      case 'no_payment_recorded': return '#dc3545'; // Red
+      case 'no_payment_recorded': return '##6c757d'; // Red
       case 'payment_refunded': return '#17a2b8'; // Teal
       case 'payment_pending': return '#fd7e14'; // Orange
       default: return '#6c757d'; // Gray
@@ -678,7 +808,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     switch (status) {
       case 'payment_completed': return 'Payment Completed';
       case 'payment_partially_completed': return 'Payment Partially Completed';
-      case 'no_payment_recorded': return 'Just Reservation';
+      case 'no_payment_recorded': return 'Reservation Paid';
       default: return status ? status.replace(/_/g, ' ').toUpperCase() : 'Payment Status Unknown';
     }
   };
@@ -845,15 +975,26 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
             gap: '1rem',
             marginTop: '1rem'
           }}>
-
             <button
               onClick={() => {
-                const link = document.createElement('a');
-                link.href = selectedImage.secure_url;
-                link.download = selectedImage.fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                try {
+                  // Create a safe filename
+                  const safeFileName = selectedImage.fileName.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+                  const fileName = `booking_image_${selectedImage.index}_${Date.now()}_${safeFileName}`;
+
+                  const link = document.createElement('a');
+                  link.href = selectedImage.secure_url;
+                  link.download = fileName;
+                  link.target = '_blank'; // Open in new tab as fallback
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } catch (error) {
+                  console.error('Download failed:', error);
+                  // Fallback: Open image in new tab for manual save
+                  window.open(selectedImage.secure_url, '_blank');
+                  showMessage('Download initiated. If not starting, right-click image and "Save image as..."');
+                }
               }}
               className="btn btn-success"
               style={{
@@ -919,7 +1060,7 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
                     <option value="all">All Payment Statuses</option>
                     <option value="payment_completed">Payment Completed</option>
                     <option value="payment_partially_completed">Payment Partially Completed</option>
-                    <option value="no_payment_recorded">Just Reservation (No Payment)</option>
+                    <option value="no_payment_recorded">Reservation Paid (No Payment)</option>
                   </select>
                 </div>
               </div>
@@ -1084,20 +1225,20 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
                                 </div>
                               </div>
                               {booking.paymentDetails.paymentHistory && booking.paymentDetails.paymentHistory.length > 0 && (
-                                  <div style={{ marginTop: '0.5rem' }}>
-                                    <strong>Payment History:</strong>
-                                    {booking.paymentDetails.paymentHistory.map((payment, index) => (
-                                      <div key={index} style={{ 
-                                        fontSize: '0.75rem', 
-                                        padding: '0.25rem', 
-                                        borderBottom: '1px solid #dee2e6',
-                                        color: payment.type === 'refund' ? '#dc3545' : '#28a745'
-                                      }}>
-                                        {payment.type === 'refund' ? 'Refund: -₱' : 'Payment: ₱'}{Math.abs(payment.amount).toLocaleString()} - {new Date(payment.date).toLocaleDateString()} - {getPaymentStatusText(payment.status)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
+                                <div style={{ marginTop: '0.5rem' }}>
+                                  <strong>Payment History:</strong>
+                                  {booking.paymentDetails.paymentHistory.map((payment, index) => (
+                                    <div key={index} style={{
+                                      fontSize: '0.75rem',
+                                      padding: '0.25rem',
+                                      borderBottom: '1px solid #dee2e6',
+                                      color: payment.type === 'refund' ? '#dc3545' : '#28a745'
+                                    }}>
+                                      {payment.type === 'refund' ? 'Refund: -₱' : 'Payment: ₱'}{Math.abs(payment.amount).toLocaleString()} - {new Date(payment.date).toLocaleDateString()} - {getPaymentStatusText(payment.status)}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1304,6 +1445,21 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
                                 title={paymentCompleted ? "Payment already completed" : fullyPaid ? "Already fully paid" : "Mark payment as fully completed"}
                               >
                                 Mark Payment as Completed
+                              </button>
+                              {/* ADD THIS REFUND BUTTON */}
+                              <button
+                                className="btn btn-info"
+                                onClick={() => processRefund(booking)}
+                                disabled={calculateAmountPaid(booking) <= 0}
+                                style={{
+                                  fontSize: '0.875rem',
+                                  padding: '0.5rem 1rem',
+                                  backgroundColor: calculateAmountPaid(booking) <= 0 ? '#6c757d' : '#17a2b8',
+                                  borderColor: calculateAmountPaid(booking) <= 0 ? '#6c757d' : '#17a2b8'
+                                }}
+                                title={calculateAmountPaid(booking) <= 0 ? "No payment to refund" : "Process a refund"}
+                              >
+                                Process Refund
                               </button>
                             </div>
                           </div>

@@ -323,13 +323,13 @@ body {
 }
 
 .btn-secondary {
-  background: var(--text-light);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--text);
-  transform: translateY(-2px);
+  opacity: 0.9;
 }
 
 .btn-danger {

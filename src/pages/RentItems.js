@@ -2,7 +2,54 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { firebaseService } from '../services/firebaseService';
-
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
 const RentItems = () => {
   const [cart, setCart] = useState({});
   const [total, setTotal] = useState(0);
@@ -340,7 +387,7 @@ const RentItems = () => {
   // Add item to cart
   const addToCart = (itemId, itemName, price) => {
     if (!user) {
-      alert("Please log in to add items to your cart.");
+      showMessage("Please log in to add items to your cart.");
       navigate('/login-register');
       return;
     }
@@ -348,7 +395,7 @@ const RentItems = () => {
     const maxQty = getMaxQuantity(itemId);
 
     if (maxQty <= 0) {
-      alert("This item is currently out of stock.");
+      showMessage("This item is currently out of stock.");
       return;
     }
 
@@ -358,7 +405,7 @@ const RentItems = () => {
       if (newCart[itemName]) {
         const newQty = newCart[itemName].quantity + 1;
         if (newQty > maxQty) {
-          alert(`Only ${maxQty} units available for "${itemName}".`);
+          showMessage(`Only ${maxQty} units available for "${itemName}".`);
           return prevCart;
         }
         newCart[itemName] = { ...newCart[itemName], quantity: newQty, itemId };
@@ -384,7 +431,7 @@ const RentItems = () => {
   // Update quantity in cart
   const updateCartQuantity = (name, newQuantity) => {
     if (!user) {
-      alert("Please log in to modify your cart.");
+      showMessage("Please log in to modify your cart.");
       return;
     }
 
@@ -399,7 +446,7 @@ const RentItems = () => {
     }
 
     if (newQuantity > maxQty) {
-      alert(`Only ${maxQty} units available for "${name}".`);
+      showMessage(`Only ${maxQty} units available for "${name}".`);
       return;
     }
 
@@ -425,7 +472,7 @@ const RentItems = () => {
 
   const checkout = () => {
     if (!user) {
-      alert("Please log in to proceed with booking.");
+      showMessage("Please log in to proceed with booking.");
       navigate('/login-register');
       return;
     }
@@ -443,7 +490,7 @@ const RentItems = () => {
     // VALIDATE CART AGAINST INVENTORY BEFORE PROCEEDING
     const isValid = validateCartAgainstInventory();
     if (!isValid) {
-      alert("Your cart contains items that exceed available inventory. Please adjust your quantities before proceeding.");
+      showMessage("Your cart contains items that exceed available inventory. Please adjust your quantities before proceeding.");
       return;
     }
 

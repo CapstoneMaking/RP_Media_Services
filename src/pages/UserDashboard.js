@@ -11,7 +11,54 @@ import IDVerification from '../components/user/UserIDVerificationPanel';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import { useNavigate, Link } from 'react-router-dom';
-
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
 const UserDashboard = () => {
   const { collections, getCollectionFiles } = useApp();
   const { user } = useAuth();
@@ -43,7 +90,7 @@ const UserDashboard = () => {
       await signOut(auth);
       navigate('/login-register');
     } catch (error) {
-      alert('Failed to logout. Please try again.');
+      showMessage('Failed to logout. Please try again.');
     }
   };
 
@@ -89,7 +136,7 @@ const UserDashboard = () => {
     const fileType = getFileType(file);
     
     if (!file.cloudinaryData?.secure_url) {
-      alert(`No ${fileType} available for download`);
+      showMessage(`No ${fileType} available for download`);
       return;
     }
 
@@ -109,13 +156,13 @@ const UserDashboard = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert(`Failed to download ${fileType}`);
+      showMessage(`Failed to download ${fileType}`);
     }
   };
 
   const downloadAllFiles = async () => {
     if (collectionFiles.length === 0) {
-      alert('No files to download');
+      showMessage('No files to download');
       return;
     }
 
@@ -149,7 +196,7 @@ const UserDashboard = () => {
         }
       }
     } catch (error) {
-      alert('Failed to download some files. Please try downloading individually.');
+      showMessage('Failed to download some files. Please try downloading individually.');
     } finally {
       setDownloadingAll(false);
     }

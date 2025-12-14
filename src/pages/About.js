@@ -4,6 +4,55 @@ import { firebaseService } from '../services/firebaseService';
 import emailjs from '@emailjs/browser';
 import { useAuth } from '../context/AuthContext';
 
+const showMessage = (message, type = 'info') => {
+  // Create a simple div for the message
+  const messageDiv = document.createElement('div');
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s;
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  messageDiv.textContent = message;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 5000);
+  
+  // Also allow click to dismiss
+  messageDiv.onclick = () => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  };
+};
+
 const About = () => {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -38,7 +87,7 @@ const About = () => {
     // Validation
     if (!formData.fullName.trim() || !formData.email.trim() || !formData.description.trim()) {
       setMessageStatus('error');
-      alert('Please fill in all fields');
+      showMessage('Please fill in all fields');
       return;
     }
 
@@ -46,7 +95,7 @@ const About = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setMessageStatus('error');
-      alert('Please enter a valid email address');
+      showMessage('Please enter a valid email address');
       return;
     }
 
@@ -87,7 +136,7 @@ const About = () => {
         }
 
         setMessageStatus('success');
-        alert('Message sent successfully! We will contact you soon.');
+        showMessage('Message sent successfully! We will contact you soon.');
 
         // Reset form
         setFormData({
@@ -100,12 +149,12 @@ const About = () => {
         e.target.reset();
       } else {
         setMessageStatus('error');
-        alert('Failed to send message. Please try again.');
+        showMessage('Failed to send message. Please try again.');
         console.error('Send message error:', result.error);
       }
     } catch (error) {
       setMessageStatus('error');
-      alert('Failed to send message. Please try again.');
+      showMessage('Failed to send message. Please try again.');
       console.error('Send message error:', error);
     } finally {
       setSending(false);
