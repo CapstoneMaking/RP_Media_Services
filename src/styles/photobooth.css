@@ -33,7 +33,7 @@
   z-index: 1;
 }
 
-.photobooth-header > * {
+.photobooth-header>* {
   position: relative;
   z-index: 2;
 }
@@ -51,7 +51,7 @@
 
 .photo-counter {
   font-size: clamp(0.9rem, 3vw, 1.1rem);
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   padding: 8px 20px;
   border-radius: 25px;
   display: inline-block;
@@ -71,8 +71,9 @@
   font-size: clamp(0.8rem, 2.5vw, 0.95rem);
 }
 
-.uploading-indicator, .frame-loading {
-  background: rgba(255,255,255,0.2);
+.uploading-indicator,
+.frame-loading {
+  background: rgba(255, 255, 255, 0.2);
   padding: 6px 15px;
   border-radius: 15px;
   font-size: clamp(0.8rem, 2.5vw, 0.9rem);
@@ -87,13 +88,13 @@
     padding: 30px 15px;
     margin-bottom: 15px;
   }
-  
+
   .title {
     font-size: clamp(2rem, 6vw, 3.5rem);
     padding: 10px 0;
     letter-spacing: 0.5px;
   }
-  
+
   .photo-counter {
     padding: 6px 15px;
     font-size: 0.9rem;
@@ -105,17 +106,17 @@
     padding: 25px 10px;
     margin-bottom: 10px;
   }
-  
+
   .title {
     font-size: clamp(1.8rem, 5vw, 2.5rem);
     margin-bottom: 10px;
   }
-  
+
   .photo-counter {
     padding: 5px 12px;
     font-size: 0.85rem;
   }
-  
+
   .cloudinary-status {
     margin-top: 5px;
   }
@@ -126,7 +127,7 @@
     padding: 60px 20px;
     margin-bottom: 30px;
   }
-  
+
   .title {
     font-size: 6rem;
     margin-bottom: 20px;
@@ -137,12 +138,12 @@
   .photobooth-header {
     padding: 20px 8px;
   }
-  
+
   .title {
     font-size: 1.6rem;
     letter-spacing: 0;
   }
-  
+
   .photo-counter {
     padding: 4px 10px;
     font-size: 0.8rem;
@@ -153,13 +154,14 @@
   .photobooth-header {
     padding: 30px 20px;
   }
-  
+
   .title {
     font-size: 4rem;
   }
 }
 
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
   .photobooth-header {
     background-size: cover;
   }
@@ -196,14 +198,15 @@
     padding: 0 15px;
     align-items: start;
   }
-  
+
   .video-area {
     max-width: 100%;
     margin: 0;
   }
-  
+
   .video-wrapper {
-    padding-bottom: 70%; /* Slightly taller aspect ratio for landscape */
+    padding-bottom: 70%;
+    /* Slightly taller aspect ratio for landscape */
   }
 }
 
@@ -223,7 +226,7 @@
     gap: 15px;
     padding: 0 15px;
   }
-  
+
   .video-area {
     max-width: 100%;
   }
@@ -236,11 +239,12 @@
     gap: 15px;
     padding: 0 10px;
   }
-  
+
   .video-wrapper {
-    padding-bottom: 75%; /* Adjust for smaller screens */
+    padding-bottom: 75%;
+    /* Adjust for smaller screens */
   }
-  
+
   .controls-section {
     padding: 20px 15px;
   }
@@ -253,16 +257,16 @@
     gap: 12px;
     padding: 0 8px;
   }
-  
+
   .video-area {
     border-radius: 10px;
   }
-  
+
   .controls-section {
     padding: 15px 12px;
     border-radius: 12px;
   }
-  
+
   .capture-btn,
   .upload-btn,
   .reset-btn,
@@ -270,7 +274,7 @@
     padding: 10px 12px;
     font-size: 0.85em;
   }
-  
+
   .frames-grid {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -282,7 +286,7 @@
   background: #1a1a1a;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
@@ -349,7 +353,7 @@
   background: white;
   padding: 35px;
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   width: 100%;
   border: 1px solid #eaeaea;
   height: 100%;
@@ -879,7 +883,7 @@
   background: #f8f9fa;
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
 }
 
@@ -1012,7 +1016,7 @@
   padding: 40px;
   background: white;
   border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   color: #666;
   margin-left: auto;
   width: 100%;
@@ -1080,7 +1084,7 @@ canvas {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .gallery-header h2 {
     text-align: center;
     margin-bottom: 10px;
@@ -1094,18 +1098,26 @@ canvas {
     align-items: center;
     justify-content: center;
   }
-  
-  .upload-btn, .reset-btn, .capture-btn {
+
+  .upload-btn,
+  .reset-btn,
+  .capture-btn {
     min-height: 50px;
   }
 }
 
 /* Ensure proper touch targets on mobile */
 @media (hover: none) and (pointer: coarse) {
-  .capture-btn, .upload-btn, .reset-btn, .frame-option, .photo-actions button {
-    min-height: 44px; /* Apple's recommended minimum touch target */
+
+  .capture-btn,
+  .upload-btn,
+  .reset-btn,
+  .frame-option,
+  .photo-actions button {
+    min-height: 44px;
+    /* Apple's recommended minimum touch target */
   }
-  
+
   .gallery-header button {
     min-height: 44px;
   }
@@ -1117,16 +1129,16 @@ canvas {
     padding: 20px 15px;
     margin-bottom: 15px;
   }
-  
+
   .title {
     font-size: clamp(2rem, 5vw, 3rem);
     margin-bottom: 10px;
   }
-  
+
   .camera-container {
     gap: 15px;
   }
-  
+
   .controls-section {
     max-height: 380px;
   }
@@ -1134,8 +1146,83 @@ canvas {
 
 /* High DPI Screens */
 @media (-webkit-min-device-pixel-ratio: 2) and (orientation: landscape),
-       (min-resolution: 192dpi) and (orientation: landscape) {
+(min-resolution: 192dpi) and (orientation: landscape) {
   .photobooth-header {
     background-size: cover;
   }
+}
+
+.fullscreen-viewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  cursor: pointer;
+}
+
+.viewer-content {
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.fullscreen-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.viewer-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 15px;
+}
+
+.close-viewer-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.3s;
+}
+
+.close-viewer-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.view-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.view-btn:hover {
+  background: #218838;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }

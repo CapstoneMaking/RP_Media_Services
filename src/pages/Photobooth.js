@@ -51,6 +51,7 @@ const showMessage = (message, type = 'info') => {
     }
   };
 };
+
 const Photobooth = () => {
   // Camera state and refs
   const videoRef = useRef(null);
@@ -64,7 +65,8 @@ const Photobooth = () => {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [frameLoaded, setFrameLoaded] = useState(false);
-const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [viewingImage, setViewingImage] = useState(null); // For full-screen view
   const { user, isAdmin } = useAuth();
 
   const showSidebar = () => {
@@ -74,6 +76,7 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
   const hideSidebar = () => {
     setSidebarVisible(false);
   };
+
   // Constants
   const MAX_PHOTOS = 3;
 
@@ -87,6 +90,17 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
     { name: "Spotify", src: "/frames/spotifyyy.png" },
     { name: "Wanted", src: "/frames/wanteddd.png" }
   ];
+
+  // Close full-screen viewer with Escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && viewingImage) {
+        setViewingImage(null);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [viewingImage]);
 
   // Camera functions
   useEffect(() => {
@@ -315,77 +329,117 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
     }
   };
 
+  // Open image in full-screen view
+  const viewImage = (url) => {
+    setViewingImage(url);
+  };
+
+  // Close full-screen view
+  const closeImageViewer = () => {
+    setViewingImage(null);
+  };
+
   return (
     <>
+      {/* Full-screen Image Viewer */}
+      {viewingImage && (
+        <div className="fullscreen-viewer" onClick={closeImageViewer}>
+          <button className="close-viewer-btn" onClick={closeImageViewer}>
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#ffffff">
+              <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
+            </svg>
+          </button>
+          <div className="viewer-content" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={viewingImage} 
+              alt="Full screen view" 
+              className="fullscreen-image"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="viewer-actions">
+              <button 
+                onClick={() => downloadImage(viewingImage, `photobooth-fullscreen-${Date.now()}.jpg`)}
+                className="download-btn"
+              >
+                Download
+              </button>
+              <button onClick={closeImageViewer} className="close-btn">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navbar and sidebar */}
-            <nav>
-              <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
-                <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
-                <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
-                <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
-                <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
-                <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
-                <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
-                <li><Link to="/about" onClick={hideSidebar}>About us</Link></li>
-      
-                {/* Conditional Dashboard Links */}
-                {user ? (
-                  isAdmin ? (
-                    <li><Link to="/AdminDashboard" onClick={hideSidebar}>Admin Dashboard</Link></li>
-                  ) : (
-                    <li><Link to="/UserDashboard" onClick={hideSidebar}>My Dashboard</Link></li>
-                  )
-                ) : (
-                  <li><Link to="/login-register" onClick={hideSidebar}>Login</Link></li>
-                )}
-              </ul>
-              <ul>
-                <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
-                <li className="hideOnMobile"><Link to="/home">Home</Link></li>
-                <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
-                <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
-                <li className="hideOnMobile"><Link to="/services">Services</Link></li>
-                <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
-                <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
-      
-                {/* Conditional Main Nav Icons */}
-                {user ? (
-                  isAdmin ? (
-                    <li className="hideOnMobile">
-                      <Link to="/AdminDashboard" title="Admin Dashboard">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
-                          <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
-                        </svg>
-                      </Link>
-                    </li>
-                  ) : (
-                    <li className="hideOnMobile">
-                      <Link to="/UserDashboard" title="User Dashboard">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
-                          <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
-                        </svg>
-                      </Link>
-                    </li>
-                  )
-                ) : (
-                  <li className="hideOnMobile">
-                    <Link to="/login-register" title="Login / Register">
-                      <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
-                        <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
-                      </svg>
-                    </Link>
-                  </li>
-                )}
-      
-                <li className="menu-button" onClick={showSidebar}>
-                  <a href="#">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
-                      <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z" />
-                    </svg>
-                  </a>
-                </li>
-              </ul>
-            </nav>
+      <nav>
+        <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
+          <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
+          <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
+          <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
+          <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
+          <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
+          <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
+          <li><Link to="/about" onClick={hideSidebar}>About us</Link></li>
+
+          {/* Conditional Dashboard Links */}
+          {user ? (
+            isAdmin ? (
+              <li><Link to="/AdminDashboard" onClick={hideSidebar}>Admin Dashboard</Link></li>
+            ) : (
+              <li><Link to="/UserDashboard" onClick={hideSidebar}>My Dashboard</Link></li>
+            )
+          ) : (
+            <li><Link to="/login-register" onClick={hideSidebar}>Login</Link></li>
+          )}
+        </ul>
+        <ul>
+          <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
+          <li className="hideOnMobile"><Link to="/home">Home</Link></li>
+          <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
+          <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
+          <li className="hideOnMobile"><Link to="/services">Services</Link></li>
+          <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
+          <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
+
+          {/* Conditional Main Nav Icons */}
+          {user ? (
+            isAdmin ? (
+              <li className="hideOnMobile">
+                <Link to="/AdminDashboard" title="Admin Dashboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                    <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                  </svg>
+                </Link>
+              </li>
+            ) : (
+              <li className="hideOnMobile">
+                <Link to="/UserDashboard" title="User Dashboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                    <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                  </svg>
+                </Link>
+              </li>
+            )
+          ) : (
+            <li className="hideOnMobile">
+              <Link to="/login-register" title="Login / Register">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                  <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                </svg>
+              </Link>
+            </li>
+          )}
+
+          <li className="menu-button" onClick={showSidebar}>
+            <a href="#">
+              <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z" />
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </nav>
 
       {/* Photobooth Content */}
       <div className="photobooth-container">
@@ -488,7 +542,6 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
           <div className="gallery">
             <div className="gallery-header">
               <h2>Your Photos ({uploadedImages.length}/{MAX_PHOTOS})</h2>
-              
             </div>
             
             <div className="grid">
@@ -505,6 +558,12 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
                     }}
                   />
                   <div className="photo-actions">
+                    <button 
+                      onClick={() => viewImage(url)}
+                      className="view-btn"
+                    >
+                      View
+                    </button>
                     <button 
                       onClick={() => downloadImage(url, `photobooth-${index + 1}.jpg`)}
                       className="download-btn"
@@ -543,17 +602,16 @@ const [sidebarVisible, setSidebarVisible] = useState(false);
             <p>All photos are automatically saved to Cloudinary and can be accessed anytime.</p>
           </div>
         )}
-
-        
       </div>
+      
       {/* Footer */}
-        <footer className="footer">
-          <div className="copyright">
-            <div className="column ss-copyright">
-              <span>&copy; 2025 RP Media Services. All rights reserved</span> 
-            </div>
+      <footer className="footer">
+        <div className="copyright">
+          <div className="column ss-copyright">
+            <span>&copy; 2025 RP Media Services. All rights reserved</span> 
           </div>
-        </footer>
+        </div>
+      </footer>
     </>
   );
 };
