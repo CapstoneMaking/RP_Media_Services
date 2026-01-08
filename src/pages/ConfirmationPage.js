@@ -810,7 +810,7 @@ const ConfirmationPage = () => {
         <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
           <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
           <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
-          <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
+          <li><Link to="/rent-schedule" onClick={hideSidebar}>Schedule</Link></li>
           <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
           <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
           <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
@@ -830,7 +830,7 @@ const ConfirmationPage = () => {
         <ul>
           <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
           <li className="hideOnMobile"><Link to="/home">Home</Link></li>
-          <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
+          <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
           <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
           <li className="hideOnMobile"><Link to="/services">Services</Link></li>
           <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
@@ -890,7 +890,7 @@ const ConfirmationPage = () => {
                 <p>Please select items/package and schedule dates first.</p>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                   <button
-                    onClick={() => navigate('/rent-items')}
+                    onClick={() => navigate('/rent-schedule')}
                     className="btn btn-primary"
                   >
                     Select Items
@@ -962,6 +962,8 @@ const ConfirmationPage = () => {
                           </tbody>
                         </table>
                         <div className="items-count">
+                          Rental duration: {rentalDays} day{rentalDays !== 1 ? 's' : ''}<br></br>
+                          Total Price: {(dailyRate * rentalDays).toLocaleString()}<br></br>
                           Total Items: {selectedItems.length}
                         </div>
                       </div>

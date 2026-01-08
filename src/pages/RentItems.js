@@ -506,7 +506,7 @@ const RentItems = () => {
     localStorage.setItem("selectedItems", JSON.stringify(selectedItems));
 
     console.log('Saved items to localStorage for checkout:', selectedItems);
-    window.location.href = "/rent-schedule";
+    window.location.href = "/Confirmation";
   };
 
   const handleStartVerification = () => {
@@ -612,7 +612,7 @@ const RentItems = () => {
         <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
           <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
           <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
-          <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
+          <li><Link to="/rent-schedule" onClick={hideSidebar}>Schedule</Link></li>
           <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
           <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
           <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
@@ -632,7 +632,7 @@ const RentItems = () => {
         <ul>
           <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
           <li className="hideOnMobile"><Link to="/home">Home</Link></li>
-          <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
+          <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
           <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
           <li className="hideOnMobile"><Link to="/services">Services</Link></li>
           <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
@@ -985,7 +985,7 @@ const RentItems = () => {
                 >
                   {cartValidationErrors.length > 0
                     ? 'Fix Inventory Issues First'
-                    : 'Proceed to Schedule'}
+                    : 'Proceed to Confirmation'}
                 </button>
                 <button onClick={clearCart} className="clear-btn">
                   Clear Cart

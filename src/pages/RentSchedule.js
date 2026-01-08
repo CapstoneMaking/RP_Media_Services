@@ -333,7 +333,7 @@ const RentSchedule = () => {
     console.log('Current items:', items.length);
     console.log('Current package:', pkg);
 
-    navigate("/confirmation");
+    navigate("/rent-items");
   };
 
   // Navigation functions for calendar
@@ -428,7 +428,7 @@ const RentSchedule = () => {
         <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
           <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
           <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
-          <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
+          <li><Link to="/rent-schedule" onClick={hideSidebar}>Schedule</Link></li>
           <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
           <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
           <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
@@ -448,7 +448,7 @@ const RentSchedule = () => {
         <ul>
           <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
           <li className="hideOnMobile"><Link to="/home">Home</Link></li>
-          <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
+          <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
           <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
           <li className="hideOnMobile"><Link to="/services">Services</Link></li>
           <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
@@ -517,31 +517,6 @@ const RentSchedule = () => {
           </div>
         </div>
 
-        {/* Current Selection Info */}
-        <div className="schedule-current-selection">
-          <h3>Current Selection:</h3>
-          {!hasSelection ? (
-            <div className="selection-warning">
-              <p>⚠️ No items or package selected</p>
-              <button onClick={goBackToSelection} className="schedule-back-btn">
-                Go Back to Select Items/Package
-              </button>
-            </div>
-          ) : pkg ? (
-            <div className="package-selection-info">
-              <strong>Package:</strong> {pkg.name}
-              <br />
-              <strong>Price:</strong> ₱{pkg.price?.toLocaleString()}
-            </div>
-          ) : (
-            <div className="items-selection-info">
-              <strong>Items:</strong> {items.length} item{items.length !== 1 ? 's' : ''} selected
-              <br />
-              <strong>Total:</strong> ₱{items.reduce((sum, item) => sum + (item.subtotal || 0), 0).toLocaleString()}
-            </div>
-          )}
-        </div>
-
         {/* Selected Dates Display */}
         <div className="schedule-selected-dates">
           <div className="schedule-date-display">
@@ -581,64 +556,17 @@ const RentSchedule = () => {
               <p className="login-prompt">Please log in to save your schedule.</p>
             )}
           </div>
-
         </div>
 
         {/* Action Section */}
         <div className="schedule-action-section">
-          <div className="schedule-date-summary">
-            <h4>Rental Period Summary</h4>
-            <div className="schedule-period-display">
-              {startDate && endDate ? (
-                <>
-                  <span className="schedule-period-dates">{startDate} to {endDate}</span>
-                  <span className="schedule-period-days">
-                    ({rentalDays} day{rentalDays !== 1 ? 's' : ''})
-                  </span>
-                </>
-              ) : (
-                <span className="schedule-period-placeholder">Select dates to see rental period</span>
-              )}
-            </div>
-
-            {/* Rental Cost Estimate */}
-            {hasSelection && startDate && endDate && (
-              <div className="rental-cost-estimate">
-                <h5>Estimated Cost:</h5>
-                {pkg ? (
-                  <div className="cost-breakdown">
-                    <div className="cost-line">
-                      <span>Package:</span>
-                      <span>₱{pkg.price?.toLocaleString()}</span>
-                    </div>
-                    <div className="cost-line total">
-                      <span>Total for {rentalDays} day{rentalDays !== 1 ? 's' : ''}:</span>
-                      <span>₱{(pkg.price * rentalDays).toLocaleString()}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="cost-breakdown">
-                    <div className="cost-line">
-                      <span>Daily Rate:</span>
-                      <span>₱{items.reduce((sum, item) => sum + (item.subtotal || 0), 0).toLocaleString()}</span>
-                    </div>
-                    <div className="cost-line total">
-                      <span>Total for {rentalDays} day{rentalDays !== 1 ? 's' : ''}:</span>
-                      <span>₱{(items.reduce((sum, item) => sum + (item.subtotal || 0), 0) * rentalDays).toLocaleString()}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           <div className="schedule-action-buttons">
             <button
               className={`schedule-nextbtn ${!startDate || !endDate || !hasSelection ? 'schedule-disabled' : ''}`}
               onClick={handleNext}
               disabled={!startDate || !endDate || !hasSelection}
             >
-              Continue to Confirmation
+              Continue to Items
             </button>
           </div>
 

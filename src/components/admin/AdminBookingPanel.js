@@ -1,6 +1,6 @@
-// AdminBookingPanel.js - UPDATED VERSION WITH CHRONOLOGICAL SORTING
+// AdminBookingPanel.js - UPDATED WITH INVENTORY INTEGRATION
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy, doc, updateDoc, getFirestore } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc, getFirestore, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -68,10 +68,12 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
   const [adminName, setAdminName] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState([]);
 
   useEffect(() => {
     if (!hasLoaded) {
       loadBookings();
+      loadInventory();
     }
 
     // Get admin's display name
@@ -79,6 +81,28 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
       getAdminDisplayName();
     }
   }, [hasLoaded]);
+
+  // Load inventory items
+  const loadInventory = async () => {
+    try {
+      const inventoryRef = collection(db, "inventory");
+      const q = query(inventoryRef);
+      const querySnapshot = await getDocs(q);
+      
+      const items = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.items && Array.isArray(data.items)) {
+          items.push(...data.items);
+        }
+      });
+      
+      setInventoryItems(items);
+      console.log("Loaded inventory items:", items.length);
+    } catch (error) {
+      console.error("Error loading inventory:", error);
+    }
+  };
 
   // Get admin's display name from Firebase Auth or Firestore
   const getAdminDisplayName = async () => {
@@ -321,6 +345,164 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     return amountPaid === 0 && totalAmount > 0;
   };
 
+  // ==============================================
+  // INVENTORY INTEGRATION FUNCTIONS
+  // ==============================================
+
+  // Get all items from a booking
+  const getItemsFromBooking = (booking) => {
+    const items = [];
+    
+    // Get items from package
+    if (booking.package && booking.package.items) {
+      booking.package.items.forEach(item => {
+        items.push({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity || 1,
+          type: 'package'
+        });
+      });
+    }
+    
+    // Get individual items
+    if (booking.items) {
+      booking.items.forEach(item => {
+        items.push({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity || 1,
+          type: 'individual'
+        });
+      });
+    }
+    
+    return items;
+  };
+
+  // Update inventory when booking status changes
+  const updateInventoryForBooking = async (booking, newStatus, oldStatus = null) => {
+    try {
+      const bookingItems = getItemsFromBooking(booking);
+      
+      if (bookingItems.length === 0) {
+        console.log("No items found in booking, skipping inventory update");
+        return;
+      }
+      
+      console.log(`Updating inventory for booking ${booking.id}: ${oldStatus} -> ${newStatus}`);
+      
+      // Get current inventory
+      const inventoryRef = doc(db, "inventory", "currentInventory");
+      const inventoryDoc = await getDoc(inventoryRef);
+      
+      let inventoryData = { items: [] };
+      if (inventoryDoc.exists()) {
+        inventoryData = inventoryDoc.data();
+      }
+      
+      // Update each item in inventory
+      const updatedItems = [...inventoryData.items];
+      
+      for (const bookingItem of bookingItems) {
+        const itemIndex = updatedItems.findIndex(item => item.id === bookingItem.id);
+        
+        if (itemIndex !== -1) {
+          const item = { ...updatedItems[itemIndex] };
+          
+          // Calculate available quantity
+          const totalQuantity = item.totalQuantity || item.quantity || 1;
+          const currentAvailable = item.availableQuantity || item.quantity || 1;
+          const currentReserved = item.reservedQuantity || 0;
+          
+          let newAvailable = currentAvailable;
+          let newReserved = currentReserved;
+          
+          // Logic for status changes
+          if (oldStatus === 'pending' && newStatus === 'active') {
+            // Already reserved, no change needed
+          } 
+          else if (oldStatus === 'active' && newStatus === 'completed') {
+            // Release items back to inventory
+            newAvailable = currentAvailable + bookingItem.quantity;
+            newReserved = Math.max(0, currentReserved - bookingItem.quantity);
+          }
+          else if (oldStatus === 'active' && newStatus === 'cancelled') {
+            // Release items back to inventory
+            newAvailable = currentAvailable + bookingItem.quantity;
+            newReserved = Math.max(0, currentReserved - bookingItem.quantity);
+          }
+          else if ((!oldStatus || oldStatus === 'cancelled' || oldStatus === 'completed') && 
+                   (newStatus === 'active' || newStatus === 'pending')) {
+            // Reserve items
+            newAvailable = Math.max(0, currentAvailable - bookingItem.quantity);
+            newReserved = currentReserved + bookingItem.quantity;
+          }
+          
+          // Ensure values don't go negative
+          newAvailable = Math.max(0, Math.min(newAvailable, totalQuantity));
+          newReserved = Math.max(0, Math.min(newReserved, totalQuantity));
+          
+          item.availableQuantity = newAvailable;
+          item.reservedQuantity = newReserved;
+          item.lastUpdated = new Date().toISOString();
+          item.updatedBy = adminName || user?.displayName || user?.email || 'admin';
+          
+          updatedItems[itemIndex] = item;
+          
+          console.log(`Updated ${bookingItem.name}: Available ${currentAvailable}->${newAvailable}, Reserved ${currentReserved}->${newReserved}`);
+        } else {
+          console.warn(`Item ${bookingItem.id} not found in inventory`);
+        }
+      }
+      
+      // Save updated inventory
+      await updateDoc(inventoryRef, { 
+        items: updatedItems,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: adminName || user?.displayName || user?.email || 'admin'
+      });
+      
+      // Update local state
+      setInventoryItems(updatedItems);
+      
+      // Trigger inventory update event
+      window.dispatchEvent(new Event('inventoryUpdated'));
+      
+      console.log(`Inventory updated successfully for booking ${booking.id}`);
+      showMessage(`Inventory updated for ${newStatus} booking`);
+      
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+      showMessage('Failed to update inventory');
+    }
+  };
+
+  // Initialize inventory tracking for all bookings
+  const initializeInventoryTracking = async () => {
+    try {
+      console.log('Initializing inventory tracking for all bookings...');
+      
+      // Get all bookings
+      const activeBookings = bookings.filter(booking => 
+        ['active', 'pending'].includes(getStatus(booking))
+      );
+      
+      console.log(`Found ${activeBookings.length} active/pending bookings`);
+      
+      // Update inventory for each booking
+      for (const booking of activeBookings) {
+        await updateInventoryForBooking(booking, getStatus(booking), null);
+      }
+      
+      showMessage(`Inventory tracking initialized for ${activeBookings.length} bookings`);
+      
+    } catch (error) {
+      console.error('Error initializing inventory tracking:', error);
+      showMessage('Error initializing inventory tracking');
+    }
+  };
+
   // Filter bookings based on selected status
   const filteredBookings = bookings.filter(booking => {
     const status = getStatus(booking);
@@ -393,7 +575,6 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     });
   };
 
-
   // Delete an image from booking (admin only)
   const deleteBookingImage = async (bookingId, imageIndex) => {
     if (!window.confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
@@ -441,11 +622,20 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
     }
   };
 
-  // Update booking status in Firebase
+  // Update booking status in Firebase with inventory integration
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
       const bookingRef = doc(db, "bookings", bookingId);
+      const booking = bookings.find(b => b.id === bookingId);
+      
+      if (!booking) {
+        showMessage('Booking not found');
+        return;
+      }
 
+      const oldStatus = getStatus(booking);
+
+      // Update booking status in Firebase
       await updateDoc(bookingRef, {
         status: newStatus,
         updatedAt: new Date().toISOString(),
@@ -464,6 +654,9 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
           : booking
       ));
 
+      // Update inventory based on status change
+      await updateInventoryForBooking(booking, newStatus, oldStatus);
+
       showMessage(`Booking status updated to: ${newStatus}`);
     } catch (error) {
       console.error('Error updating booking status:', error);
@@ -472,131 +665,131 @@ const AdminBookingPanel = ({ isAdmin = false }) => {
   };
 
   // Process refund for a booking
-const processRefund = async (booking) => {
-  const bookingId = booking.id;
-  const amountPaid = calculateAmountPaid(booking);
-  const totalAmount = calculateTotalAmount(booking);
-  
-  if (amountPaid <= 0) {
-    showMessage("No payment has been made to refund!");
-    return;
-  }
-
-  const maxRefundable = amountPaid; // Can't refund more than paid
-  const amountInput = window.prompt(
-    `Enter refund amount:\n` +
-    `Total Amount: ₱${totalAmount.toLocaleString()}\n` +
-    `Amount Paid: ₱${amountPaid.toLocaleString()}\n` +
-    `Available for refund: ₱${maxRefundable.toLocaleString()}\n\n` +
-    `Enter refund amount (max: ₱${maxRefundable.toLocaleString()}):`,
-    maxRefundable.toString()
-  );
-
-  if (amountInput === null) return; // User cancelled
-
-  const refundAmount = parseFloat(amountInput);
-
-  if (isNaN(refundAmount) || refundAmount <= 0) {
-    showMessage("Please enter a valid positive amount.");
-    return;
-  }
-
-  if (refundAmount > maxRefundable) {
-    showMessage(`Refund amount cannot exceed ₱${maxRefundable.toLocaleString()}.`);
-    return;
-  }
-
-  const reason = window.prompt("Enter reason for refund (optional):", "");
-
-  if (window.confirm(`Are you sure you want to refund ₱${refundAmount.toLocaleString()}?\nReason: ${reason || "No reason provided"}`)) {
-    await updateRefundStatus(bookingId, refundAmount, reason);
-  }
-};
-
-// Update refund status in Firebase
-const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
-  try {
-    const bookingRef = doc(db, "bookings", bookingId);
+  const processRefund = async (booking) => {
+    const bookingId = booking.id;
+    const amountPaid = calculateAmountPaid(booking);
+    const totalAmount = calculateTotalAmount(booking);
     
-    // Get current booking
-    const currentBooking = bookings.find(b => b.id === bookingId);
-    const currentPaymentDetails = currentBooking?.paymentDetails || {};
-    const currentAmountPaid = currentPaymentDetails.amountPaid || 0;
-    
-    // Calculate new amount paid
-    const newAmountPaid = Math.max(0, currentAmountPaid - refundAmount);
-    
-    // Get current admin name
-    const currentAdminName = adminName || user?.displayName || user?.email.split('@')[0] || 'admin';
-    
-    // Determine new payment status
-    let newPaymentStatus;
-    if (newAmountPaid === 0) {
-      newPaymentStatus = 'no_payment_recorded';
-    } else {
-      const totalAmount = calculateTotalAmount(currentBooking);
-      if (newAmountPaid >= totalAmount) {
-        newPaymentStatus = 'payment_completed';
-      } else {
-        newPaymentStatus = 'payment_partially_completed';
-      }
+    if (amountPaid <= 0) {
+      showMessage("No payment has been made to refund!");
+      return;
     }
-    
-    // Add to payment history
-    const paymentHistory = currentPaymentDetails.paymentHistory || [];
-    paymentHistory.push({
-      amount: -refundAmount, // Negative amount for refund
-      date: new Date().toISOString(),
-      status: 'refund_processed',
-      recordedBy: currentAdminName,
-      type: 'refund',
-      reason: reason || "No reason provided"
-    });
-    
-    const updateData = {
-      paymentStatus: newPaymentStatus,
-      updatedAt: new Date().toISOString(),
-      updatedBy: currentAdminName,
-      paymentDetails: {
-        ...currentPaymentDetails,
-        amountPaid: newAmountPaid,
-        lastUpdated: new Date().toISOString(),
+
+    const maxRefundable = amountPaid; // Can't refund more than paid
+    const amountInput = window.prompt(
+      `Enter refund amount:\n` +
+      `Total Amount: ₱${totalAmount.toLocaleString()}\n` +
+      `Amount Paid: ₱${amountPaid.toLocaleString()}\n` +
+      `Available for refund: ₱${maxRefundable.toLocaleString()}\n\n` +
+      `Enter refund amount (max: ₱${maxRefundable.toLocaleString()}):`,
+      maxRefundable.toString()
+    );
+
+    if (amountInput === null) return; // User cancelled
+
+    const refundAmount = parseFloat(amountInput);
+
+    if (isNaN(refundAmount) || refundAmount <= 0) {
+      showMessage("Please enter a valid positive amount.");
+      return;
+    }
+
+    if (refundAmount > maxRefundable) {
+      showMessage(`Refund amount cannot exceed ₱${maxRefundable.toLocaleString()}.`);
+      return;
+    }
+
+    const reason = window.prompt("Enter reason for refund (optional):", "");
+
+    if (window.confirm(`Are you sure you want to refund ₱${refundAmount.toLocaleString()}?\nReason: ${reason || "No reason provided"}`)) {
+      await updateRefundStatus(bookingId, refundAmount, reason);
+    }
+  };
+
+  // Update refund status in Firebase
+  const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
+    try {
+      const bookingRef = doc(db, "bookings", bookingId);
+      
+      // Get current booking
+      const currentBooking = bookings.find(b => b.id === bookingId);
+      const currentPaymentDetails = currentBooking?.paymentDetails || {};
+      const currentAmountPaid = currentPaymentDetails.amountPaid || 0;
+      
+      // Calculate new amount paid
+      const newAmountPaid = Math.max(0, currentAmountPaid - refundAmount);
+      
+      // Get current admin name
+      const currentAdminName = adminName || user?.displayName || user?.email.split('@')[0] || 'admin';
+      
+      // Determine new payment status
+      let newPaymentStatus;
+      if (newAmountPaid === 0) {
+        newPaymentStatus = 'no_payment_recorded';
+      } else {
+        const totalAmount = calculateTotalAmount(currentBooking);
+        if (newAmountPaid >= totalAmount) {
+          newPaymentStatus = 'payment_completed';
+        } else {
+          newPaymentStatus = 'payment_partially_completed';
+        }
+      }
+      
+      // Add to payment history
+      const paymentHistory = currentPaymentDetails.paymentHistory || [];
+      paymentHistory.push({
+        amount: -refundAmount, // Negative amount for refund
+        date: new Date().toISOString(),
+        status: 'refund_processed',
+        recordedBy: currentAdminName,
+        type: 'refund',
+        reason: reason || "No reason provided"
+      });
+      
+      const updateData = {
+        paymentStatus: newPaymentStatus,
+        updatedAt: new Date().toISOString(),
         updatedBy: currentAdminName,
-        paymentHistory: paymentHistory
-      }
-    };
-    
-    console.log("Processing refund:", {
-      bookingId,
-      refundAmount,
-      newAmountPaid,
-      newPaymentStatus,
-      updateData
-    });
-    
-    await updateDoc(bookingRef, updateData);
-    
-    // Update local state
-    setBookings(prev => prev.map(booking => {
-      if (booking.id === bookingId) {
-        return {
-          ...booking,
-          paymentStatus: newPaymentStatus,
-          updatedAt: new Date().toISOString(),
+        paymentDetails: {
+          ...currentPaymentDetails,
+          amountPaid: newAmountPaid,
+          lastUpdated: new Date().toISOString(),
           updatedBy: currentAdminName,
-          paymentDetails: updateData.paymentDetails
-        };
-      }
-      return booking;
-    }));
-    
-    showMessage(`Refund of ₱${refundAmount.toLocaleString()} processed successfully!\nNew amount paid: ₱${newAmountPaid.toLocaleString()}`);
-    
-  } catch (error) {
-    console.error('Error processing refund:', error);
-    showMessage('Failed to process refund');
-  }
-};
+          paymentHistory: paymentHistory
+        }
+      };
+      
+      console.log("Processing refund:", {
+        bookingId,
+        refundAmount,
+        newAmountPaid,
+        newPaymentStatus,
+        updateData
+      });
+      
+      await updateDoc(bookingRef, updateData);
+      
+      // Update local state
+      setBookings(prev => prev.map(booking => {
+        if (booking.id === bookingId) {
+          return {
+            ...booking,
+            paymentStatus: newPaymentStatus,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentAdminName,
+            paymentDetails: updateData.paymentDetails
+          };
+        }
+        return booking;
+      }));
+      
+      showMessage(`Refund of ₱${refundAmount.toLocaleString()} processed successfully!\nNew amount paid: ₱${newAmountPaid.toLocaleString()}`);
+      
+    } catch (error) {
+      console.error('Error processing refund:', error);
+      showMessage('Failed to process refund');
+    }
+  };
 
   // Update payment status in Firebase - UPDATED FOR MULTIPLE PARTIAL PAYMENTS
   const updatePaymentStatus = async (bookingId, action, amount = 0) => {
@@ -857,6 +1050,32 @@ const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
     );
   };
 
+  // Check inventory availability for booking items
+  const checkBookingInventoryAvailability = (booking) => {
+    const bookingItems = getItemsFromBooking(booking);
+    const availability = [];
+    
+    bookingItems.forEach(bookingItem => {
+      const inventoryItem = inventoryItems.find(item => item.id === bookingItem.id);
+      if (inventoryItem) {
+        const available = inventoryItem.availableQuantity || inventoryItem.quantity || 0;
+        const reserved = inventoryItem.reservedQuantity || 0;
+        const total = inventoryItem.totalQuantity || inventoryItem.quantity || 1;
+        
+        availability.push({
+          name: bookingItem.name,
+          required: bookingItem.quantity,
+          available: available,
+          reserved: reserved,
+          total: total,
+          hasEnough: available >= bookingItem.quantity
+        });
+      }
+    });
+    
+    return availability;
+  };
+
   // Image Modal Component
   const ImageModal = () => {
     if (!selectedImage || !imageModalOpen) return null;
@@ -1069,6 +1288,9 @@ const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
                 <button onClick={loadBookings} className="btn btn-secondary">
                   Refresh Bookings
                 </button>
+                <button onClick={initializeInventoryTracking} className="btn btn-info">
+                  Sync Inventory
+                </button>
               </div>
             </div>
           </div>
@@ -1114,6 +1336,7 @@ const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
                   const partiallyPaid = isPartiallyPaid(booking);
                   const noPayment = isNoPayment(booking);
                   const paymentCompleted = isPaymentCompleted(booking);
+                  const inventoryAvailability = checkBookingInventoryAvailability(booking);
 
                   return (
                     <div key={booking.id} className="booking-folder">
@@ -1149,6 +1372,45 @@ const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
 
                       {expandedBookings[booking.id] && (
                         <div className="booking-folder-content">
+                          {/* Inventory Availability Section */}
+                          {inventoryAvailability.length > 0 && (
+                            <div className="inventory-availability-section" style={{ 
+                              marginBottom: '1.5rem', 
+                              padding: '1rem', 
+                              backgroundColor: '#f8f9fa', 
+                              borderRadius: '8px',
+                              border: '1px solid #dee2e6'
+                            }}>
+                              <h5>📦 Inventory Availability</h5>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                                {inventoryAvailability.map((item, index) => (
+                                  <div key={index} style={{
+                                    padding: '0.75rem',
+                                    backgroundColor: item.hasEnough ? '#d4edda' : '#f8d7da',
+                                    border: `1px solid ${item.hasEnough ? '#c3e6cb' : '#f5c6cb'}`,
+                                    borderRadius: '4px'
+                                  }}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{item.name}</div>
+                                    <div style={{ fontSize: '0.875rem' }}>
+                                      <div>Required: {item.required}</div>
+                                      <div>Available: {item.available}</div>
+                                      <div>Reserved: {item.reserved}</div>
+                                      <div>Total: {item.total}</div>
+                                    </div>
+                                    <div style={{ 
+                                      marginTop: '0.5rem', 
+                                      fontSize: '0.75rem', 
+                                      fontWeight: 'bold',
+                                      color: item.hasEnough ? '#155724' : '#721c24'
+                                    }}>
+                                      {item.hasEnough ? '✅ Sufficient Inventory' : '❌ Insufficient Inventory'}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="grid grid-cols-2" style={{ gap: '2rem', marginBottom: '1.5rem' }}>
                             <div>
                               <h5>Customer Information</h5>
@@ -1446,7 +1708,6 @@ const updateRefundStatus = async (bookingId, refundAmount, reason = "") => {
                               >
                                 Mark Payment as Completed
                               </button>
-                              {/* ADD THIS REFUND BUTTON */}
                               <button
                                 className="btn btn-info"
                                 onClick={() => processRefund(booking)}
