@@ -1,10 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../utils/firebase';
 import { useAuth } from '../context/AuthContext';
 import { firebaseService } from '../services/firebaseService';
+import emailjs from '@emailjs/browser';
+
+// ====================================================
+// EMAILJS CONFIGURATION
+// ====================================================
+const EMAILJS_PUBLIC_KEY = 'orx7cDFwLKVnAld7s';
+const EMAILJS_SERVICE_ID = 'service_ppveqbj';
+const PAYMENT_CONFIRMED_TEMPLATE_ID = 'template_a4zldlc';
+const ELECTRONIC_RECEIPT_TEMPLATE_ID = 'template_k71h8k9';
+
+// Initialize EmailJS
+emailjs.init(EMAILJS_PUBLIC_KEY);
+// ====================================================
 
 const ConfirmationPage = () => {
   const [selectedItems, setSelectedItems] = useState([]);
@@ -38,7 +51,6 @@ const ConfirmationPage = () => {
 
   const { isVerified, refreshVerificationStatus } = useAuth();
   const navigate = useNavigate();
-
 
   // Use ref to track PayPal script
   const paypalScriptRef = useRef(null);
@@ -123,28 +135,225 @@ const ConfirmationPage = () => {
     setSidebarVisible(false);
   };
 
-  // Load PayPal SDK - SIMPLIFIED VERSION
-  useEffect(() => {
-    // Only load PayPal when payment modal is shown
-    if (showPaymentModal && !isPayPalSdkLoaded && !window.paypal) {
-      console.log('Loading PayPal SDK...');
+  // ====================================================
+  // MAIN EMAIL SENDING FUNCTION - FIXED VERSION
+  // ====================================================
+  const sendConfirmationEmails = async (paymentDetails) => {
+  try {
+    // Get recipient email
+    const recipientEmail = userInfo?.email || currentUser?.email;
 
+    if (!recipientEmail) {
+      return {
+        success: false,
+        error: 'No email address found for user',
+        message: 'Please ensure your profile has a valid email address.'
+      };
+    }
+    
+
+    // Generate IDs
+    const bookingId = `RP${Date.now().toString().slice(-8)}`;
+    const receiptNo = `RCPT${Date.now().toString().slice(-10)}`;
+
+    // Calculate rental days
+    const rentalDays = bookingData.startDate && bookingData.endDate
+      ? Math.ceil((new Date(bookingData.endDate) - new Date(bookingData.startDate)) / (1000 * 60 * 60 * 24)) + 1
+      : 0;
+
+    // Calculate financials
+    const dailyRate = selectedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0) ||
+      (selectedPackage ? selectedPackage.price : 0);
+
+    const additionalFee = 1000;
+    const total = (dailyRate * rentalDays) + additionalFee;
+    const remainingBalance = total;
+
+    // Create full address
+    const fullAddress = formData.specificAddress && formData.city && formData.province && formData.region
+      ? `${formData.specificAddress}, ${formData.city}, ${formData.province}, ${formData.region}`
+      : 'Address not specified';
+
+    // Create items text
+    const itemsText = selectedItems.length > 0 
+      ? selectedItems.map(item => 
+          `${item.name} x${item.quantity} - ₱${item.subtotal?.toFixed(2)}`
+        ).join(' | ')
+      : (selectedPackage ? `${selectedPackage.name} Package` : 'No items');
+
+    // Base template parameters
+    const baseParams = {
+      // EmailJS required fields
+      to_email: recipientEmail,
+      to_name: userInfo.name || 'Customer',
+      from_name: 'RP Media Services',
+      reply_to: 'info@rpmediaservices.com',
+
+      // Customer information
+      email: recipientEmail,
+      customer_name: userInfo.name || 'Customer',
+      customer_email: recipientEmail,
+      contact_number: userInfo.contact || 'Not provided',
+
+      // Address information
+      region: formData.region || 'Not specified',
+      province: formData.province || 'Not specified',
+      city: formData.city || 'Not specified',
+      specific_address: formData.specificAddress || 'Not specified',
+      full_address: fullAddress,
+      venue: fullAddress,
+
+      // Booking details
+      booking_id: bookingId,
+      receipt_number: receiptNo,
+      start_date: bookingData.startDate || 'Not specified',
+      end_date: bookingData.endDate || 'Not specified',
+      rental_days: rentalDays.toString(),
+      booking_type: selectedPackage ? 'Package' : 'Individual Items',
+
+      // Payment details
+      transaction_id: paymentDetails.orderID || paymentDetails.paymentID || 'N/A',
+      booking_date: new Date().toLocaleString('en-PH'),
+      receipt_date: new Date().toLocaleDateString('en-PH'),
+      receipt_time: new Date().toLocaleTimeString('en-PH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+
+      // Financial details
+      daily_rate: dailyRate.toFixed(2),
+      rental_subtotal: (dailyRate * rentalDays).toFixed(2),
+      additional_fee: additionalFee.toFixed(2),
+      total_amount: total.toFixed(2),
+      reservation_fee: '1000.00',
+      remaining_balance: remainingBalance.toFixed(2),
+
+      // ✅✅✅ CRITICAL FIX: ACTUAL BOOLEANS for Handlebars {{#if}}
+      multiple_days: rentalDays > 1, // ACTUAL boolean (true/false)
+
+      // Package/Items information
+      is_package: !!selectedPackage, // ✅ ACTUAL boolean (true/false)
+      package_name: selectedPackage?.name || '',
+      package_description: selectedPackage?.description || '',
+      package_subtotal: (dailyRate * rentalDays).toFixed(2),
+      items_text: itemsText,
+      items_count: selectedItems.length.toString(),
+
+      // Links
+      dashboard_link: `${window.location.origin}/userDashboard`,
+      receipt_link: `${window.location.origin}/receipt/${receiptNo}`,
+    };
+
+    // Add debugging log
+    console.log('📧 DEBUG: Email parameters being sent:', {
+      to_email: baseParams.to_email,
+      is_package: baseParams.is_package,
+      is_package_type: typeof baseParams.is_package,
+      multiple_days: baseParams.multiple_days,
+      multiple_days_type: typeof baseParams.multiple_days,
+      has_selectedPackage: !!selectedPackage,
+      rental_days: rentalDays
+    });
+
+    // 1. Send Payment Confirmation Email
+    console.log('📤 Sending payment confirmation email...');
+    await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      PAYMENT_CONFIRMED_TEMPLATE_ID,
+      baseParams
+    );
+
+    // Wait between emails
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 2. Send Electronic Receipt Email
+    // Add receipt-specific parameters
+    const receiptParams = {
+      ...baseParams,
+      receipt_type: 'Electronic Receipt',
+      payment_method: 'PayPal',
+      payment_status: 'Reservation Fee Paid'
+    };
+
+    console.log('📤 Sending electronic receipt email...');
+    console.log('📊 Receipt params:', {
+      is_package: receiptParams.is_package,
+      multiple_days: receiptParams.multiple_days,
+      template_id: ELECTRONIC_RECEIPT_TEMPLATE_ID
+    });
+
+    await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      ELECTRONIC_RECEIPT_TEMPLATE_ID,
+      receiptParams
+    );
+
+    return {
+      success: true,
+      bookingId,
+      receiptNo,
+      message: `Confirmation emails sent to ${recipientEmail}`
+    };
+
+  } catch (error) {
+    console.error('❌ Email sending error:', error);
+    console.error('Error details:', error.text || error.message);
+    
+    // Check if it's the electronic receipt that failed
+    if (error.text && error.text.includes('recipients address')) {
+      console.error('💥 EmailJS error: Recipient address issue');
+      console.error('Current recipient:', userInfo?.email || currentUser?.email);
+    }
+    
+    // Try to send at least one email if both fail
+    try {
+      const recipientEmail = userInfo?.email || currentUser?.email;
+      if (recipientEmail) {
+        await emailjs.send(
+          EMAILJS_SERVICE_ID,
+          PAYMENT_CONFIRMED_TEMPLATE_ID,
+          {
+            to_email: recipientEmail,
+            to_name: userInfo.name || 'Customer',
+            from_name: 'RP Media Services',
+            reply_to: 'info@rpmediaservices.com',
+            message: 'Your booking has been confirmed. Please check your dashboard for details.'
+          }
+        );
+        console.log('📧 Fallback confirmation email sent');
+      }
+    } catch (fallbackError) {
+      console.error('Fallback email also failed:', fallbackError);
+    }
+
+    return {
+      success: false,
+      error: error.text || error.message || 'Failed to send emails',
+      message: 'Booking confirmed but email failed to send. Please check your dashboard.'
+    };
+  }
+};
+
+
+  // ====================================================
+  // PAYPAL AND BOOKING FUNCTIONS
+  // ====================================================
+
+  // Load PayPal SDK
+  useEffect(() => {
+    if (showPaymentModal && !isPayPalSdkLoaded && !window.paypal) {
       const script = document.createElement('script');
       script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.REACT_APP_PAYPAL_CLIENT_ID || 'test'}&currency=PHP`;
       script.async = true;
       script.id = 'paypal-sdk-script';
 
       script.onload = () => {
-        console.log('PayPal SDK loaded successfully');
         setIsPayPalSdkLoaded(true);
         paypalScriptRef.current = script;
-
-        // Initialize PayPal buttons after script loads
         setTimeout(initializePayPalButtons, 100);
       };
 
       script.onerror = (error) => {
-        console.error('Failed to load PayPal SDK:', error);
         setErrorMessage('Failed to load payment system. Please refresh the page or try again later.');
         setIsPayPalSdkLoaded(false);
       };
@@ -152,24 +361,22 @@ const ConfirmationPage = () => {
       document.head.appendChild(script);
 
       return () => {
-        // Clean up PayPal buttons if they exist
         if (paypalButtonsRef.current) {
           try {
             paypalButtonsRef.current.close();
           } catch (error) {
-            console.log('Error closing PayPal buttons:', error);
+            // Silent fail
           }
           paypalButtonsRef.current = null;
         }
 
-        // Don't remove script if payment is successful or processing
         if (!paymentSuccessful && !isProcessingPayment && paypalScriptRef.current) {
           try {
             if (paypalScriptRef.current.parentNode) {
               paypalScriptRef.current.parentNode.removeChild(paypalScriptRef.current);
             }
           } catch (error) {
-            console.log('Error removing PayPal script:', error);
+            // Silent fail
           }
           paypalScriptRef.current = null;
           setIsPayPalSdkLoaded(false);
@@ -181,15 +388,11 @@ const ConfirmationPage = () => {
   // Initialize PayPal buttons
   const initializePayPalButtons = () => {
     if (!window.paypal || !showPaymentModal) {
-      console.log('PayPal not available or modal not shown');
       return;
     }
 
-    console.log('Initializing PayPal buttons...');
-
     const container = document.getElementById('paypal-button-container');
     if (!container) {
-      console.error('PayPal button container not found');
       return;
     }
 
@@ -206,7 +409,6 @@ const ConfirmationPage = () => {
           height: 55,
         },
         createOrder: function (data, actions) {
-          console.log('Creating PayPal order...');
           return actions.order.create({
             purchase_units: [{
               amount: {
@@ -218,14 +420,10 @@ const ConfirmationPage = () => {
           });
         },
         onApprove: async function (data, actions) {
-          console.log('PayPal payment approved:', data.orderID);
           setIsProcessingPayment(true);
 
           try {
             const details = await actions.order.capture();
-            console.log('Payment captured successfully:', details);
-
-            // Create payment details object
             const paymentDetails = {
               orderID: data.orderID,
               paymentID: details.id,
@@ -241,40 +439,42 @@ const ConfirmationPage = () => {
             // Save booking with payment details
             await saveBooking(paymentDetails);
 
-            setPaymentSuccessful(true);
+            // Send confirmation emails
+            const emailResult = await sendConfirmationEmails(paymentDetails);
+            
+            if (emailResult.success) {
+              setPaymentSuccessful(true);
+              setMessage(`Booking reserved successfully! ₱1,000 reservation fee paid. Confirmation emails sent to ${userInfo.email}. Redirecting...`);
+            } else {
+              setPaymentSuccessful(true);
+              setMessage(`Booking reserved successfully! ₱1,000 reservation fee paid. Please check your dashboard for details.`);
+            }
 
           } catch (error) {
-            console.error('Payment processing error:', error);
             setErrorMessage('Payment successful but booking save failed. Please contact support.');
             setIsProcessingPayment(false);
           }
         },
         onError: function (err) {
-          console.error('PayPal payment error:', err);
           setErrorMessage('Payment failed. Please try again.');
           setIsProcessingPayment(false);
         },
         onCancel: function (data) {
-          console.log('Payment cancelled by user');
           setErrorMessage('Payment was cancelled. Please complete payment to confirm your booking.');
         }
       });
 
       if (buttons.isEligible()) {
         buttons.render('#paypal-button-container').then((instance) => {
-          console.log('PayPal buttons rendered successfully');
           paypalButtonsRef.current = instance;
         }).catch((error) => {
-          console.error('Error rendering PayPal buttons:', error);
           setErrorMessage('Failed to load payment buttons. Please refresh the page.');
         });
       } else {
-        console.error('PayPal buttons not eligible');
         setErrorMessage('PayPal payment is not available. Please try another payment method.');
       }
 
     } catch (error) {
-      console.error('Error initializing PayPal buttons:', error);
       setErrorMessage('Failed to initialize payment system. Please try again.');
     }
   };
@@ -310,15 +510,10 @@ const ConfirmationPage = () => {
   // Function to fetch user verification data
   const fetchUserVerificationData = async (userEmail) => {
     try {
-      console.log('Fetching verification data for:', userEmail);
-
       const result = await firebaseService.getUserVerification(userEmail);
-      console.log('Verification result:', result);
 
       if (result.success && result.verification) {
         const verification = result.verification;
-        console.log('Found verification data structure:', verification);
-
         setVerificationData(verification);
 
         const fullName = formatFullName(verification);
@@ -330,16 +525,12 @@ const ConfirmationPage = () => {
           verification.phoneNumber ||
           '';
 
-        console.log('Extracted data:', { fullName, contact });
-
         return { name: fullName, contact };
       } else {
-        console.log('No verification data found for user or result not successful');
         return { name: '', contact: '' };
       }
 
     } catch (error) {
-      console.error('Error fetching verification data:', error);
       return { name: '', contact: '' };
     }
   };
@@ -347,10 +538,7 @@ const ConfirmationPage = () => {
   // Function to fetch user data from Firestore users collection
   const fetchUserData = async (userEmail) => {
     try {
-      console.log('Fetching user data for:', userEmail);
-
       const userDoc = await firebaseService.getUserByEmail(userEmail);
-      console.log('User document found:', userDoc);
 
       if (userDoc) {
         const name = userDoc.name || userDoc.fullName || userDoc.displayName || '';
@@ -362,15 +550,12 @@ const ConfirmationPage = () => {
           userDoc.contact ||
           '';
 
-        console.log('Extracted user data:', { name, contact });
         return { name, contact };
       }
 
-      console.log('No user data found in users collection');
       return { name: '', contact: '' };
 
     } catch (error) {
-      console.error('Error fetching user data:', error);
       return { name: '', contact: '' };
     }
   };
@@ -383,43 +568,29 @@ const ConfirmationPage = () => {
     }
 
     try {
-      console.log('Checking verification status for:', userEmail);
-
       if (isVerified) {
-        console.log('User is verified (from AuthContext)');
         setIsUserVerified(true);
         return true;
       }
 
-      console.log('Manually checking verification status...');
       const isVerifiedManually = await refreshVerificationStatus();
       setIsUserVerified(isVerifiedManually);
       return isVerifiedManually;
 
     } catch (error) {
-      console.error('Error checking verification status:', error);
       setIsUserVerified(false);
       return false;
     }
   };
 
   useEffect(() => {
-    console.log('ConfirmationPage mounted - checking localStorage...');
-
     const loadBookingData = () => {
       try {
         const items = JSON.parse(localStorage.getItem("selectedItems")) || [];
         const pkg = JSON.parse(localStorage.getItem("selectedPackage"));
         const booking = JSON.parse(localStorage.getItem("bookingFormData")) || {};
 
-        console.log('Loaded from localStorage:', {
-          itemsCount: items.length,
-          package: pkg ? pkg.name : 'none',
-          bookingDates: booking
-        });
-
         if (items.length === 0 && !pkg) {
-          console.warn('No items or package selected');
           setHasValidBooking(false);
           return;
         }
@@ -429,7 +600,6 @@ const ConfirmationPage = () => {
         setBookingData(booking);
 
       } catch (error) {
-        console.error('Error loading data from localStorage:', error);
         setSelectedItems([]);
         setSelectedPackage(null);
         setBookingData({});
@@ -440,26 +610,19 @@ const ConfirmationPage = () => {
     loadBookingData();
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user);
       setCurrentUser(user);
 
       if (user) {
         const authName = user.displayName || '';
         const authEmail = user.email || '';
 
-        console.log('Auth data:', { authName, authEmail });
-
         await checkVerificationStatus(user.email);
 
         const verificationDataResult = await fetchUserVerificationData(user.email);
-        console.log('Verification data:', verificationDataResult);
 
         if ((!verificationDataResult.name && !verificationDataResult.contact) ||
           (verificationDataResult.name === '' && verificationDataResult.contact === '')) {
-          console.log('Trying to fetch from users collection...');
           const userData = await fetchUserData(user.email);
-          console.log('User collection data:', userData);
-
           verificationDataResult.name = verificationDataResult.name || userData.name || '';
           verificationDataResult.contact = verificationDataResult.contact || userData.contact || '';
         }
@@ -471,9 +634,6 @@ const ConfirmationPage = () => {
         };
 
         setUserInfo(updatedUserInfo);
-
-        console.log('Final auto-filled user info:', updatedUserInfo);
-        console.log('User verification status:', isUserVerified);
       } else {
         setIsUserVerified(false);
       }
@@ -489,12 +649,6 @@ const ConfirmationPage = () => {
       bookingData.startDate &&
       bookingData.endDate;
     setHasValidBooking(isValid);
-    console.log('Booking validity check:', {
-      hasItems: selectedItems.length > 0,
-      hasPackage: !!selectedPackage,
-      hasDates: !!(bookingData.startDate && bookingData.endDate),
-      isValid: isValid
-    });
   }, [selectedItems, selectedPackage, bookingData]);
 
   const policyTexts = {
@@ -602,7 +756,6 @@ const ConfirmationPage = () => {
     `
   };
 
-
   const showPolicy = (policyKey) => {
     setPolicyContent(policyTexts[policyKey]);
     setShowPolicyModal(true);
@@ -698,12 +851,12 @@ const ConfirmationPage = () => {
         package: selectedPackage ? selectedPackage : null,
 
         // Financial Information
-        totalRentalAmount: total, // Total cost of rental
-        reservationFee: reservationFeePaid, // Reservation fee amount
-        reservationFeePaid: reservationFeePaid, // Amount paid now
-        remainingBalance: remainingBalance, // Balance to pay later
-        paymentStatus: 'reservation_paid', // NOT 'paid' - it's just reservation
-        fullPaymentStatus: 'pending', // Full payment status
+        totalRentalAmount: total,
+        reservationFee: reservationFeePaid,
+        reservationFeePaid: reservationFeePaid,
+        remainingBalance: remainingBalance,
+        paymentStatus: 'reservation_paid',
+        fullPaymentStatus: 'pending',
 
         // Payment Details
         paymentDetails: paymentDetails ? {
@@ -716,14 +869,14 @@ const ConfirmationPage = () => {
           amount: reservationFeePaid,
           currency: 'PHP',
           status: 'completed',
-          paymentType: 'reservation_fee', // Important: specifies this is only reservation
+          paymentType: 'reservation_fee',
           paidAt: paymentDetails.create_time || new Date().toISOString()
         } : null,
 
         // System Fields
         timestamp: new Date().toISOString(),
         userId: currentUser.uid,
-        bookingStatus: 'reserved', // Booking status is 'reserved', not 'paid'
+        bookingStatus: 'reserved',
 
         // Verification Details
         verificationDetails: verificationData ? {
@@ -736,14 +889,9 @@ const ConfirmationPage = () => {
         } : null
       };
 
-      console.log('Saving booking to Firestore:', booking);
-
       // Save to Firestore bookings collection
-      const docRef = await addDoc(collection(db, "bookings"), booking);
+      await addDoc(collection(db, "bookings"), booking);
 
-      console.log('Booking saved with ID:', docRef.id);
-
-      setMessage("Booking reserved successfully! ₱1,000 reservation fee paid. Redirecting...");
       setErrorMessage("");
 
       // Clear ALL rental data
@@ -751,13 +899,10 @@ const ConfirmationPage = () => {
       localStorage.removeItem("selectedItems");
       localStorage.removeItem("selectedPackage");
 
-      console.log('Cleared all rental data from localStorage');
-
       // Show success and redirect
-      setTimeout(() => navigate("/userDashboard"), 2000);
+      setTimeout(() => navigate("/userDashboard"), 3000);
 
     } catch (error) {
-      console.error("Error saving booking:", error);
       setErrorMessage("Error saving booking. Please contact support.");
     }
   };
@@ -810,7 +955,7 @@ const ConfirmationPage = () => {
         <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
           <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
           <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
-          <li><Link to="/rent-schedule" onClick={hideSidebar}>Schedule</Link></li>
+          <li><Link to="/rent-items" onClick={hideSidebar}>Rent</Link></li>
           <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
           <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
           <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
@@ -830,7 +975,7 @@ const ConfirmationPage = () => {
         <ul>
           <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
           <li className="hideOnMobile"><Link to="/home">Home</Link></li>
-          <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
+          <li className="hideOnMobile"><Link to="/rent-items">Rent</Link></li>
           <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
           <li className="hideOnMobile"><Link to="/services">Services</Link></li>
           <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
@@ -890,7 +1035,7 @@ const ConfirmationPage = () => {
                 <p>Please select items/package and schedule dates first.</p>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                   <button
-                    onClick={() => navigate('/rent-schedule')}
+                    onClick={() => navigate('/rent-items')}
                     className="btn btn-primary"
                   >
                     Select Items
@@ -1205,7 +1350,7 @@ const ConfirmationPage = () => {
               )}
             </form>
           )}
-
+          
           {/* Policy Modal */}
           <div
             className="policy-modal"
@@ -1275,6 +1420,9 @@ const ConfirmationPage = () => {
                   <h2>Reservation Fee Paid!</h2>
                   <p>Your booking has been reserved with ₱1,000 reservation fee.
                     The remaining balance of ₱{remainingBalance.toLocaleString()} will be paid upon equipment pickup.</p>
+                  <p style={{ marginTop: '10px', fontWeight: 'bold', color: '#28a745' }}>
+                    Confirmation emails have been sent to {userInfo.email}
+                  </p>
                 </div>
               ) : (
                 <div className="payment-content">

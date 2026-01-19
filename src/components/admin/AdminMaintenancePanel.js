@@ -1542,7 +1542,7 @@ const AdminMaintenancePanel = () => {
                     <div className="report-actions">
                       <button
                         onClick={() => handleStatusUpdate(report.id, 'under-repair')}
-                        className="btn btn-warning"
+                        className="btn btn-secondary"
                         disabled={actionLoading}
                         style={{ marginRight: '8px' }}
                       >
@@ -1550,7 +1550,7 @@ const AdminMaintenancePanel = () => {
                       </button>
                       <button
                         onClick={() => openWriteOffModal(report)}
-                        className="btn btn-danger"
+                        className="btn btn-secondary"
                         disabled={actionLoading}
                         style={{ marginRight: '8px' }}
                       >
