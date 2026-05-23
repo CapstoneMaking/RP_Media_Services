@@ -18,9 +18,8 @@ import {
   signOut,
   updateProfile,
   sendEmailVerification,
-  applyActionCode,
   checkActionCode,
-  confirmPasswordReset as firebaseConfirmPasswordReset, // Renamed import
+  confirmPasswordReset as firebaseConfirmPasswordReset,
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { cloudinaryService } from './cloudinaryService';
@@ -56,12 +55,9 @@ async function registerUser(email, password, userData) {
       }
     }
     
-    // 3. Require Gmail addresses (you can change this to other domains)
+    // 3. Allowed domains
     const allowedDomains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
     const isAllowedDomain = allowedDomains.some(allowed => domain === allowed);
-    
-    // ADMIN EXCEPTION: ONLY allow admin@rpmediaservices.com
-    const isAdminEmail = email.toLowerCase() === 'admin@rpmediaservices.com';
     
     if (!isAllowedDomain) {
       return { success: false, error: 'Please use a Gmail, Yahoo, or Outlook email address to register.' };
@@ -94,7 +90,6 @@ async function registerUser(email, password, userData) {
       console.log('Verification email sent to:', email);
     } catch (verificationError) {
       console.error('Failed to send verification email:', verificationError);
-      // If verification email fails, delete the user
       await user.delete();
       return { 
         success: false, 
@@ -111,19 +106,18 @@ async function registerUser(email, password, userData) {
     await saveUserData(user.uid, {
       ...userData,
       email: user.email,
-      emailVerified: false, // Track verification status
-      accountStatus: 'pending_verification', // User cannot login until verified
+      emailVerified: false,
+      accountStatus: 'pending_verification',
       verificationSentAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     });
 
-    // IMPORTANT: Sign out the user immediately after registration
-    // They cannot login until they verify email
+    // Sign out the user immediately after registration
     await signOut(auth);
 
     return { 
       success: true, 
-      user: null, // Return null user since they're logged out
+      user: null,
       message: 'Account created! Please check your email and click the verification link to activate your account. You cannot login until you verify your email.',
       requiresVerification: true
     };
@@ -131,7 +125,6 @@ async function registerUser(email, password, userData) {
     console.error('Registration error:', error);
     let errorMessage = error.message;
     
-    // Provide user-friendly error messages
     if (error.code === 'auth/email-already-in-use') {
       errorMessage = 'Email address already registered. Please use a different email or try logging in.';
     } else if (error.code === 'auth/weak-password') {
@@ -150,26 +143,19 @@ async function registerUser(email, password, userData) {
 
 async function loginUser(email, password) {
   try {
-    // Basic email format check during login
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return { success: false, error: 'Invalid email format' };
     }
     
-    // First try to login
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // CRITICAL: Check if email is verified
-    // ADMIN EXCEPTION: Only one admin account doesn't need verification
     const isAdminEmail = email.toLowerCase() === 'admin@rpmediaservices.com';
     
-    // CRITICAL: Check if email is verified (except for the one admin account)
     if (!user.emailVerified && !isAdminEmail) {
-      // User is not verified - sign them out and show error
       await signOut(auth);
       
-      // Check if verification email was sent recently
       const userDoc = await getUserByEmail(email);
       let errorMessage = 'Please verify your email address before logging in. Check your inbox for the verification email.';
       
@@ -191,18 +177,15 @@ async function loginUser(email, password) {
       };
     }
     
-    // User is verified - update last login
     const userDoc = await getUserByEmail(email);
     if (userDoc) {
       const userRef = doc(db, 'users', userDoc.id);
       await updateDoc(userRef, {
         lastLogin: new Date().toISOString(),
         accountStatus: 'active',
-        // Auto-verify the admin account in Firestore
         emailVerified: isAdminEmail ? true : userDoc.emailVerified
       });
     } else if (isAdminEmail) {
-      // Create admin user record if it doesn't exist
       await saveUserData(user.uid, {
         name: 'Admin',
         email: user.email,
@@ -243,22 +226,17 @@ async function logoutUser() {
   }
 }
 
-// PASSWORD RESET FUNCTIONS
 async function sendPasswordReset(email) {
   try {
-    // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return { success: false, error: 'Invalid email format' };
     }
 
-    // Send password reset email
     await sendPasswordResetEmail(auth, email);
     
     console.log('Password reset email sent to:', email);
-    return { 
-      success: true, 
-    };
+    return { success: true };
   } catch (error) {
     console.error('Password reset error:', error);
     let errorMessage = error.message;
@@ -277,7 +255,6 @@ async function sendPasswordReset(email) {
   }
 }
 
-// Changed name to confirmPasswordResetCode to avoid conflict
 async function confirmPasswordResetCode(oobCode, newPassword) {
   try {
     await firebaseConfirmPasswordReset(auth, oobCode, newPassword);
@@ -312,11 +289,8 @@ async function checkPasswordResetCode(oobCode) {
   }
 }
 
-// NEW: Send verification email to unverified user
 async function sendVerificationEmail(email) {
   try {
-    // This requires the user to be logged in, so we need a different approach
-    // We'll handle this in the LoginRegister component by showing instructions
     return { 
       success: false, 
       error: 'Please use the "Resend Verification" option on the login page.' 
@@ -326,11 +300,8 @@ async function sendVerificationEmail(email) {
   }
 }
 
-// NEW: Resend verification email for pending accounts
 async function resendVerificationEmail(email) {
   try {
-    // Get user from auth (they might not be logged in)
-    // We'll use a different approach - show instructions
     return { 
       success: true, 
       message: 'Please check your email inbox and spam folder. If you still need help, contact support.' 
@@ -340,7 +311,6 @@ async function resendVerificationEmail(email) {
   }
 }
 
-// NEW: Check if user exists but is unverified
 async function checkUserVerificationStatus(email) {
   try {
     const userDoc = await getUserByEmail(email);
@@ -453,7 +423,6 @@ async function processPayment(paymentData) {
     console.log('Starting payment processing...');
     console.log('Payment data received:', paymentData);
     
-    // Validate required fields
     if (!paymentData.userEmail) {
       throw new Error('User email is required');
     }
@@ -486,7 +455,6 @@ async function processPayment(paymentData) {
     const docRef = await addDoc(collection(db, 'payments'), paymentDoc);
     console.log('Payment saved to Firebase with ID:', docRef.id);
     
-    // Verify the payment was saved
     const savedDoc = await getDoc(docRef);
     if (savedDoc.exists()) {
       console.log('Payment verification - saved data:', savedDoc.data());
@@ -596,7 +564,6 @@ async function updateCollectionImageCount(collectionId, newCount) {
 
 async function deleteCollection(collectionId) {
   try {
-    // First, delete all files in this collection
     const filesResult = await getFilesByCollection(collectionId);
     if (filesResult.success) {
       for (const file of filesResult.files) {
@@ -604,7 +571,6 @@ async function deleteCollection(collectionId) {
       }
     }
 
-    // Then delete the collection
     await deleteDoc(doc(db, 'collections', collectionId));
     return { success: true };
   } catch (error) {
@@ -630,7 +596,6 @@ async function saveFileData(fileData) {
       description: fileData.description || '',
       collectionId: fileData.collectionId,
       
-      // Save Cloudinary generated ID and data
       cloudinaryData: {
         public_id: fileData.cloudinaryData.public_id,
         secure_url: fileData.cloudinaryData.secure_url,
@@ -833,7 +798,6 @@ async function updateVerification(verificationId, verificationData) {
 
 async function saveRentalItems(rentalItems) {
   try {
-    // Since rental items are global, we'll store them in a single document
     const docRef = doc(db, 'system', 'rentalInventory');
     await setDoc(docRef, {
       rentalItems,
@@ -921,22 +885,11 @@ async function saveInventoryItems(inventoryItems) {
   try {
     console.log('Saving inventory items to Firebase:', inventoryItems.length, 'items');
     
-    // Clean up items - remove any File objects and keep only image URLs
     const cleanItems = inventoryItems.map(item => {
       const { imageFile, ...cleanItem } = item;
-      
-      // If we have imageFile and image is a data URL, we need to upload it first
-      // But for now, just remove the File object
-      if (cleanItem.image && cleanItem.image.startsWith('data:image')) {
-        // This is a base64 image that hasn't been uploaded yet
-        // We'll handle this in the InventoryPanel.js
-        console.warn('Item has base64 image that needs upload:', item.id);
-      }
-      
       return cleanItem;
     });
     
-    // Save to 'inventory/currentInventory' document
     const docRef = doc(db, 'inventory', 'currentInventory');
     await setDoc(docRef, {
       items: cleanItems,
@@ -975,28 +928,23 @@ async function saveInventoryItem(itemData) {
   try {
     console.log('Saving individual inventory item:', itemData.name);
     
-    // Prepare item data for Firebase (remove File objects)
     const itemForFirebase = { ...itemData };
     
-    // If there's a File object (imageFile), upload it to Cloudinary first
     if (itemData.imageFile) {
       try {
         console.log('Uploading image to Cloudinary for item:', itemData.name);
         const cloudinaryResult = await cloudinaryService.uploadImage(itemData.imageFile);
         
-        // Update the item with Cloudinary URL
         itemForFirebase.image = cloudinaryResult.secure_url;
         itemForFirebase.cloudinaryPublicId = cloudinaryResult.public_id;
         
         console.log('Image uploaded to Cloudinary:', cloudinaryResult.public_id);
       } catch (uploadError) {
         console.error('Failed to upload image to Cloudinary:', uploadError);
-        // Continue without image
         itemForFirebase.image = null;
       }
     }
     
-    // Remove File objects from the data before saving to Firebase
     delete itemForFirebase.imageFile;
     
     const docRef = await addDoc(collection(db, 'inventoryItems'), {
@@ -1022,7 +970,6 @@ async function updateInventoryItemQuantity(itemId, newQuantity) {
   try {
     console.log('Updating inventory item quantity:', itemId, newQuantity);
     
-    // Try to update in the main inventory document first
     const docRef = doc(db, 'inventory', 'currentInventory');
     const docSnap = await getDoc(docRef);
     
@@ -1042,10 +989,9 @@ async function updateInventoryItemQuantity(itemId, newQuantity) {
         totalItems: updatedItems.length
       }, { merge: true });
       
-      console.log('✅ Updated quantity in main inventory');
+      console.log('Updated quantity in main inventory');
     }
     
-    // Also update in the inventoryItems collection if it exists
     try {
       const itemsResult = await getInventoryItemsByCustomId(itemId);
       if (itemsResult.success && itemsResult.items.length > 0) {
@@ -1054,13 +1000,12 @@ async function updateInventoryItemQuantity(itemId, newQuantity) {
           availableQuantity: newQuantity,
           updatedAt: new Date().toISOString()
         });
-        console.log('✅ Updated quantity in inventoryItems collection');
+        console.log('Updated quantity in inventoryItems collection');
       }
     } catch (collectionError) {
-      console.log('ℹ️ Item not found in collection, continuing...');
+      console.log('Item not found in collection, continuing...');
     }
     
-    // Update localStorage for fallback
     const savedInventoryItems = localStorage.getItem('rentalItems');
     if (savedInventoryItems) {
       const inventoryItems = JSON.parse(savedInventoryItems);
@@ -1071,7 +1016,7 @@ async function updateInventoryItemQuantity(itemId, newQuantity) {
         return item;
       });
       localStorage.setItem('rentalItems', JSON.stringify(updatedInventoryItems));
-      console.log('✅ Updated quantity in localStorage');
+      console.log('Updated quantity in localStorage');
     }
     
     return { success: true };
@@ -1085,28 +1030,23 @@ async function updateInventoryItem(itemId, updateData) {
   try {
     console.log('Updating inventory item:', itemId);
     
-    // Prepare update data for Firebase
     const updateDataForFirebase = { ...updateData };
     
-    // If there's a new image file, upload it to Cloudinary
     if (updateData.imageFile) {
       try {
         console.log('Uploading new image to Cloudinary for update');
         const cloudinaryResult = await cloudinaryService.uploadImage(updateData.imageFile);
         
-        // Update with Cloudinary URL
         updateDataForFirebase.image = cloudinaryResult.secure_url;
         updateDataForFirebase.cloudinaryPublicId = cloudinaryResult.public_id;
         
         console.log('New image uploaded to Cloudinary:', cloudinaryResult.public_id);
       } catch (uploadError) {
         console.error('Failed to upload new image to Cloudinary:', uploadError);
-        // Keep existing image
         delete updateDataForFirebase.image;
       }
     }
     
-    // Remove File objects
     delete updateDataForFirebase.imageFile;
     
     const docRef = doc(db, 'inventoryItems', itemId);
@@ -1155,38 +1095,31 @@ async function saveInventoryToFirebase(inventoryItems) {
   try {
     console.log('Starting Firebase inventory save for', inventoryItems.length, 'items');
     
-    // First, process all items to upload images if needed
     const processedItems = [];
     
     for (const item of inventoryItems) {
       try {
         const itemCopy = { ...item };
         
-        // If item has an image that's a base64 string (from form), upload to Cloudinary
         if (item.image && item.image.startsWith('data:image')) {
           try {
             console.log(`Uploading base64 image for item: ${item.name}`);
             
-            // Convert base64 to blob
             const response = await fetch(item.image);
             const blob = await response.blob();
             
-            // Upload to Cloudinary
             const cloudinaryResult = await cloudinaryService.uploadImage(blob);
             
-            // Update item with Cloudinary URL
             itemCopy.image = cloudinaryResult.secure_url;
             itemCopy.cloudinaryPublicId = cloudinaryResult.public_id;
             
             console.log(`Image uploaded to Cloudinary: ${cloudinaryResult.public_id}`);
           } catch (uploadError) {
             console.error(`Failed to upload image for ${item.name}:`, uploadError);
-            // Use default image if upload fails
             itemCopy.image = '/assets/items/default.png';
           }
         }
         
-        // Remove any File objects
         delete itemCopy.imageFile;
         
         processedItems.push(itemCopy);
@@ -1196,31 +1129,26 @@ async function saveInventoryToFirebase(inventoryItems) {
       }
     }
     
-    // Method 1: Save all items as a batch in a single document
     const result = await saveInventoryItems(processedItems);
     
     if (result.success) {
-      console.log('✅ Inventory saved successfully to Firebase');
+      console.log('Inventory saved successfully to Firebase');
       return { success: true };
     } else {
-      console.error('❌ Failed to save inventory batch:', result.error);
+      console.error('Failed to save inventory batch:', result.error);
       
-      // Method 2: Try saving individually
       console.log('Trying individual saves as fallback...');
       const individualResults = [];
       
       for (const item of processedItems) {
         try {
-          // First check if item already exists by custom ID
           const existingResult = await getInventoryItemsByCustomId(item.id);
           
           if (existingResult.success && existingResult.items.length > 0) {
-            // Update existing
             const firebaseId = existingResult.items[0].firebaseId;
             const updateResult = await updateInventoryItem(firebaseId, item);
             individualResults.push(updateResult);
           } else {
-            // Create new
             const saveResult = await saveInventoryItem(item);
             individualResults.push(saveResult);
           }
@@ -1232,10 +1160,10 @@ async function saveInventoryToFirebase(inventoryItems) {
       
       const allSuccessful = individualResults.every(r => r.success);
       if (allSuccessful) {
-        console.log('✅ All items saved individually');
+        console.log('All items saved individually');
         return { success: true };
       } else {
-        console.error('❌ Some items failed to save');
+        console.error('Some items failed to save');
         return { 
           success: false, 
           error: 'Some items failed to save',
@@ -1244,7 +1172,7 @@ async function saveInventoryToFirebase(inventoryItems) {
       }
     }
   } catch (error) {
-    console.error('❌ Error in saveInventoryToFirebase:', error);
+    console.error('Error in saveInventoryToFirebase:', error);
     return { success: false, error: error.message };
   }
 }
@@ -1327,10 +1255,7 @@ async function getPaymentsByCollection(collectionId) {
 
 async function getUserAccessibleCollections(userEmail) {
   try {
-    // Get user's payment status
     const paymentStatus = await getUserPaymentStatus(userEmail);
-    
-    // Get all collections
     const collectionsResult = await getCollections();
     
     if (!collectionsResult.success) {
@@ -1341,17 +1266,14 @@ async function getUserAccessibleCollections(userEmail) {
 
     if (paymentStatus.success && paymentStatus.paymentStatus.isPaid) {
       if (paymentStatus.paymentStatus.accessType === 'all') {
-        // User has access to all collections
         accessibleCollections = collectionsResult.collections;
       } else {
-        // User has access to specific collections
         accessibleCollections = collectionsResult.collections.filter(collection => 
           paymentStatus.paymentStatus.collectionAccess.includes(collection.id) || 
-          collection.price === 0 // Always include free collections
+          collection.price === 0
         );
       }
     } else {
-      // User only has access to free collections
       accessibleCollections = collectionsResult.collections.filter(collection => 
         collection.price === 0
       );
@@ -1396,11 +1318,6 @@ async function processRefund(paymentId, reason) {
 async function sendMessage(messageData) {
   try {
     console.log('Sending message to Firebase...');
-    console.log('Message data:', {
-      email: messageData.email,
-      fullName: messageData.fullName,
-      description: messageData.description
-    });
     
     const docRef = await addDoc(collection(db, 'sendMessage'), {
       email: messageData.email,
@@ -1620,7 +1537,7 @@ export const firebaseService = {
   
   // Password Reset
   sendPasswordReset,
-  confirmPasswordResetCode, // Updated name
+  confirmPasswordResetCode,
   checkPasswordResetCode,
   
   // User Management
