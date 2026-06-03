@@ -174,12 +174,26 @@ const ConfirmationPage = () => {
       ? `${formData.specificAddress}, ${formData.city}, ${formData.province}, ${formData.region}`
       : 'Address not specified';
 
-    // Create items text
-    const itemsText = selectedItems.length > 0 
-      ? selectedItems.map(item => 
-          `${item.name} x${item.quantity} - ₱${item.subtotal?.toFixed(2)}`
-        ).join(' | ')
-      : (selectedPackage ? `${selectedPackage.name} Package` : 'No items');
+    // Create items text - UPDATED to show package items
+    let itemsText = '';
+    if (selectedItems.length > 0) {
+      itemsText = selectedItems.map(item => 
+        `${item.name} x${item.quantity} - ₱${item.subtotal?.toFixed(2)}`
+      ).join(' | ');
+    } else if (selectedPackage) {
+      // Show package items in email
+      if (selectedPackage.items && selectedPackage.items.length > 0) {
+        itemsText = `PACKAGE: ${selectedPackage.name}\nItems included:\n` + 
+          selectedPackage.items.map(item => `- ${item.name} x${item.quantity || 1}`).join('\n');
+      } else if (selectedPackage.includedItems && selectedPackage.includedItems.length > 0) {
+        itemsText = `PACKAGE: ${selectedPackage.name}\nItems included:\n` + 
+          selectedPackage.includedItems.map(item => `- ${item}`).join('\n');
+      } else {
+        itemsText = `${selectedPackage.name} Package`;
+      }
+    } else {
+      itemsText = 'No items';
+    }
 
     // Base template parameters
     const baseParams = {
@@ -333,7 +347,6 @@ const ConfirmationPage = () => {
     };
   }
 };
-
 
   // ====================================================
   // PAYPAL AND BOOKING FUNCTIONS
@@ -1073,7 +1086,7 @@ const ConfirmationPage = () => {
                   </div>
                 </div>
 
-                {/* Items/Package Card */}
+                {/* Items/Package Card - UPDATED to show package items */}
                 <div className="summary-card">
                   <div className="card-header">
                     <h3>{selectedPackage ? 'Selected Package' : 'Rental Items'}</h3>
@@ -1083,6 +1096,41 @@ const ConfirmationPage = () => {
                       <div className="package-details">
                         <h4>{selectedPackage.name}</h4>
                         <p className="package-description">{selectedPackage.description}</p>
+                        
+                        {/* Display items inside the package */}
+                        {selectedPackage.items && selectedPackage.items.length > 0 && (
+                          <div className="package-items-list">
+                            <h3> Items Included in this Package:</h3>
+                            <table className="package-items-table">
+                              <thead>
+                                <tr>
+                                  <th>Item Name</th>
+                                  <th>Quantity</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedPackage.items.map((item, idx) => (
+                                  <tr key={idx}>
+                                    <td>{item.name}</td>
+                                    <td>{item.quantity || 1}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        
+                        {/* If package has a different items structure (includedItems array) */}
+                        {selectedPackage.includedItems && selectedPackage.includedItems.length > 0 && (
+                          <div className="package-items-list">
+                            <h5>📦 Items Included:</h5>
+                            <ul>
+                              {selectedPackage.includedItems.map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="items-details">
@@ -1108,7 +1156,7 @@ const ConfirmationPage = () => {
                         </table>
                         <div className="items-count">
                           Rental duration: {rentalDays} day{rentalDays !== 1 ? 's' : ''}<br></br>
-                          Total Price: {(dailyRate * rentalDays).toLocaleString()}<br></br>
+                          Total Price: ₱{(dailyRate * rentalDays).toLocaleString()}<br></br>
                           Total Items: {selectedItems.length}
                         </div>
                       </div>
